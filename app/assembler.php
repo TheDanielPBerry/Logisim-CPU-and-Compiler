@@ -15,18 +15,20 @@
 		ENDWHILE
 	ENDFUNC
 
-	FUNC str_cmp(left: char*, right: *char)
-		DEFINE index: word = 0
-		WHILE left[index] != right[index]
-			IF left[index] == 0
-				RETURN TRUE
-			ENDIF
-		ENDWHILE
-		RETURN FALSE
-	ENDFUNC
-
 	FUNC main()
 		CALL print(&string)
+	ENDFUNC
+	";
+
+
+	$sourceCode = "
+	CONST boolTest: char = TRUE
+	CONST putchar: *char = 0xFF02
+
+	FUNC main()
+		IF TRUE
+			SET *putchar = 'A'
+		ENDIF
 	ENDFUNC
 	";
 	
@@ -191,7 +193,7 @@
 						}
 					} else {
 						$address_type = 'stack';
-
+						
 						//If inside of a function, dynamically increase the frame size by the size of the variable
 						$stackFrame['frame']['size'] += $size;
 						//variables on the stack are marked by their offset from the stack pointer
@@ -223,9 +225,9 @@
 				case "SET":	//Variable Assignment
 					[$leftToken, $rightToken] = expTrim('=', $args);
 					
-					preg_match("/(?<pointer>\*)?(?<varName>&?[^\s\[\]]+)(?:\[(?<index>[^\s\[\]]+)\])?/", $leftToken, $leftMatches);
+					preg_match("/(?<varName>[\&\*]?[^\s\[\]]+)(?:\[(?<index>[^\s\[\]]+)\])?/", $leftToken, $leftMatches);
 					$left = findToken($leftMatches['varName']);
-
+					
 					//Look for a type casting
 					preg_match("/^\((?<type>\*?char|\*?word)\)\s*(?<literal>.+)$/", $rightToken, $typeMatch);
 					if(empty($typeMatch['type'])) {
@@ -262,7 +264,7 @@
 				
 				case "IF":
 					$conditionalCount = count(array_filter($stackFrame, fn($var) => $var['type'] == 'conditional'));
-					$conditionalId = 'if-' . $loopCount;
+					$conditionalId = 'if-' . $conditionalCount;
 					$conditional = [
 						'exit_id' => $conditionalId . '-exit'
 					];
@@ -733,6 +735,14 @@
 		[$leftToken, $rightToken] = preg_split("/[\!\=\>\<]{1,2}/", $expr);
 		$leftToken = trim($leftToken);
 		$rightToken = trim($rightToken);
+		if(strtoupper($leftToken) == 'TRUE') {
+			$leftToken = '(char)1';
+		} else if(strtoupper($leftToken) == 'FALSE') {
+			$leftToken = '(char)0';
+		}
+		if(empty($rightToken)) {
+			$rightToken = '(char)1';
+		}
 		
 		//$left = findToken($leftToken);
 		//$leftToken = '(' . $left['type'] . ')' . $leftToken;
@@ -750,11 +760,13 @@
 		$result[] = $leftReg . $rightReg;
 		$result[] = '10';
 		
-		preg_match("/\S+\s*([\!\=\>\<]{1,2})\s*\S+/", $expr, $boolMatch);
-		if(count($boolMatch) <= 1) {
+		preg_match("/^\S+\s*(?:(?<condition>[\!\=\>\<]{1,2})\s*\S+)?$/", $expr, $boolMatch);
+		if(count($boolMatch) == 0) {
 			throw new Exception("\nLine Number: " . $lineNumber . "  Invalid boolean expression: \"" . $expr . "\"\n");
+		} else if(empty($booMatch['condition'])) {
+			return '==';
 		}
-		return $boolMatch[1];
+		return $boolMatch['condition'];
 	}
 
 
@@ -784,8 +796,8 @@
 		
 		//Match to an ascii character literal
 		preg_match("/^(?:TRUE|FALSE)$/", strtoupper($literal), $boolMatch);
-		if(count($boolMatch) > 1) {
-			return strtoupper($boolMatch) == 'TRUE' ? '01' : '00';
+		if(count($boolMatch) > 0) {
+			return strtoupper($boolMatch[0]) == 'TRUE' ? '01' : '00';
 		}
 
 
@@ -794,7 +806,7 @@
 		if(count($charMatch) > 1) {
 			$charMatch[1] = str_replace("\\n", "\n", $charMatch[1]);
 			$charMatch[1] = str_replace("\\0", "\0", $charMatch[1]);
-			return str_pad(bin2hex($charMatch[1]), $size*2, '0', STR_PAD_LEFT);
+			return str_pad(bin2hex($charMatch[1]), 2, '0', STR_PAD_LEFT);
 		}
 		
 		//Match to a string literal
@@ -874,8 +886,9 @@
 				$token = substr($token, 0, -1);
 				$size = 1;
 			}
-
-			$token = '(' . $type . ')' . $token;
+			if(!empty($type)) {
+				$token = '(' . $type . ')' . $token;
+			}
 			$literal = parseLiteral($token);
 			if($literal) {
 				$type ??= strlen($literal) == 2 ? 'char' : 'word';
