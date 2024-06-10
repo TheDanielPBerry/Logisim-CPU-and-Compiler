@@ -1,18 +1,34 @@
 <?php
 	error_reporting(E_ERROR);
 
-
 	
+
 	$sourceCode = "
 	DEFINE string: char = \"Ciao Mondo\\n\"
+
+	FUNC substr(src: *char, start: word, length: word): *char
+		DEFINE dest: *char = 0x8000
+		DEFINE index: word = 0
+		WHILE src[start] != 0
+			IF start == length
+				RETURN dest
+			ENDIF
+			SET dest[index] = src[start]
+			ALU index + 1
+			ALU start + 1
+		ENDWHILE
+		RETURN dest
+	ENDFUNC
 	
-	FUNC print(str: *char)
+	
+	FUNC print(str: *char): word
 		CONST putchar: *char = 0xFF02
 		DEFINE index: word = 0
 		WHILE str[index] != 0
-			SET putchar = str[index]
+			SET *putchar = str[index]
 			ALU index + 1
 		ENDWHILE
+		RETURN index
 	ENDFUNC
 
 	FUNC main()
@@ -20,18 +36,6 @@
 	ENDFUNC
 	";
 
-
-	$sourceCode = "
-	CONST boolTest: char = TRUE
-	CONST putchar: *char = 0xFF02
-
-	FUNC main()
-		IF TRUE
-			SET *putchar = 'A'
-		ENDIF
-	ENDFUNC
-	";
-	
 
 	$TYPES = [
 		'char' => 1,
@@ -278,6 +282,7 @@
 
 					$conditional['exit'] = parseLiteral(count($result));
 					$scopeTracker[] = $conditional;
+					break;
 
 				case "ENDIF":
 					$conditional = array_pop($scopeTracker);
@@ -352,6 +357,13 @@
 						$args = expTrim(',', $call['args']);
 						foreach($args as $index => $argToken) {
 							$param = $func['stack'][array_keys($params)[$index]];
+							
+							//Look for a type casting
+							preg_match("/^\((?<type>\*?char|\*?word)\)\s*(?<literal>.+)$/", $argToken, $typeMatch);
+							if(count($typeMatch) == 0) {
+								$argToken = '(' . $param['type'] . ')' . $argToken;
+							}
+							
 							[$assignmentReg, $arg] = fetchToken($argToken);
 							
 							//Move fetched argument onto stack
@@ -467,7 +479,7 @@
 					break;
 				
 				case "RETURN":
-					preg_match("/^(?<returnToken>.*)+$/", $args, $returnMatch);
+					preg_match("/^(?<returnToken>.*)$/", $args, $returnMatch);
 					
 					[$assignmentReg, $ret] = fetchToken($returnMatch['returnToken']);
 					
@@ -604,7 +616,7 @@
 		}
 		
 		//Look for a type casting
-		preg_match("/^\(\*?(?<type>char|word)\)\s*(?<token>.+)$/", $rightToken, $typeMatch);
+		preg_match("/^\((?<type>(\*)?(?:char|word))\)\s*(?<token>.+)$/", $rightToken, $typeMatch);
 		if(count($typeMatch) > 0) {
 			$assignmentSize ??= $TYPES[$typeMatch['type']];
 			$assignmentReg ??= ($assignmentSize <= 1 ? '5' : '7');
@@ -740,7 +752,7 @@
 		} else if(strtoupper($leftToken) == 'FALSE') {
 			$leftToken = '(char)0';
 		}
-		if(empty($rightToken)) {
+		if(is_null($rightToken)) {
 			$rightToken = '(char)1';
 		}
 		
@@ -763,7 +775,7 @@
 		preg_match("/^\S+\s*(?:(?<condition>[\!\=\>\<]{1,2})\s*\S+)?$/", $expr, $boolMatch);
 		if(count($boolMatch) == 0) {
 			throw new Exception("\nLine Number: " . $lineNumber . "  Invalid boolean expression: \"" . $expr . "\"\n");
-		} else if(empty($booMatch['condition'])) {
+		} else if(empty($boolMatch['condition'])) {
 			return '==';
 		}
 		return $boolMatch['condition'];
@@ -876,6 +888,7 @@
 		if(substr($token, 0, 1) == '*') {
 			$token = substr($token, 1);
 			$addressType = 'index';
+			$inference = true;
 		}
 
 		$return = $stackFrame[$token];
@@ -903,6 +916,9 @@
 			}
 		}
 
+		if($inference) {
+			$return['type'] = str_replace('*', '', $return['type']);
+		}
 		if(!empty($addressType)) {
 			$return['address_type'] = $addressType;
 		}
