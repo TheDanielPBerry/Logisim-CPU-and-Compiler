@@ -1,0 +1,16 @@
+version: "3.8"
+services:
+  logisim:
+    container_name: logisim
+    image: lamp_stack
+    build:
+      context: .
+      target: lamp_stack
+      dockerfile: lamp.dockerfile
+    volumes:
+      - ./app:/app
+    ports:
+      - 8080:80
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
