@@ -5,12 +5,21 @@ CONST getchar: *char = 0xFF04
 
 
 FUNC print(str: *char): word
-	DEFINE index: word = 0
-	WHILE str[index] != 0
-		SET *putchar = str[index]
-		ALU index + 1
-	ENDWHILE
-	RETURN index
+	MOV str -> IDX
+	ENTRY :loop
+		MOV MIX -> A (0000)
+		ALU A | 0 -> NUL
+		JE :exit_print
+		MOV A -> *putchar
+		ALU IDX + 1 -> IDX
+	GOTO :loop
+	ENTRY :exit_print
+	//DEFINE index: word = 0
+	//WHILE str[index] != 0
+	//	SET *putchar = str[index]
+	//	SET index = index + 1
+	//ENDWHILE
+	//RETURN index
 ENDFUNC
 
 FUNC println(str: *char): word
@@ -27,10 +36,10 @@ FUNC scanline(str: *char): word
 		IF character != 0
 			SET *putchar = character
 			IF character == 8
-				ALU index - 1
+				SET index = index - 1
 			ELSE
 				SET str[index] = character
-				ALU index + 1
+				SET index = index + 1
 			ENDIF
 		ENDIF
 		SET character = getchar

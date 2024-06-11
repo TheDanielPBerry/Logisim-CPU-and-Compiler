@@ -1,10 +1,9 @@
 
-// Hashing
-
+// Simple hashing algorithm to hash an array of values into a table
 FUNC hash(str: *char, length: word): word
 	DEFINE index: word = 0
-	DEFINE accumulator: word = 0;
+	DEFINE accumulator: word = 1;
 	WHILE index < length
-		SET accumulator = 0
+		SET accumulator = str[index] * accumulator
 	ENDWHILE
 ENDFUNC

@@ -3,16 +3,25 @@
 
 	
 	//
+	//
+//
+	//
+//
+	//
+
+	$sourceCode = "
+	//#INCLUDEIFNOT 'lib/stdio.dink'
 	//#INCLUDEIFNOT 'lib/string.dink'
 	//DEFINE stwing: *char = (char)[40]
 	//DEFINE string2: *char = \"Cia\"
 
-	$sourceCode = "
-	#INCLUDEIFNOT 'lib/stdio.dink'
-	DEFINE color: *char = \"abc\"
+	DEFINE color: char = 'a'
 
 	FUNC main()
-		CALL print(&color)
+		MOV (char)2 > A
+		MOV (char)'A' > B
+		MOV B > D
+		ALU A & B -> C
 	ENDFUNC
 	";
 
@@ -279,31 +288,11 @@
 				case "JE":
 					$result[] = "ec";
 					$result[] = "01";	//SET JE
-					if($stackFrame[$args] || $stackFrameArgs[$args]) {
-						$entry = findToken($args);
-						$result[] = getMemoryRegister($entry) . '9';
-						$result[] = [$entry, 'top'];
-						$result[] = [$entry, 'bottom'];
-					} else {
-						$result[] = 'F9';
-						$result[] = [$args, 'top'];
-						$result[] = [$args, 'bottom'];
-					}
-					break;
 
-				case "JNE":
-					$result[] = "ec";
-					$result[] = "08";	//SET JE
-					if($stackFrame[$args] || $stackFrameArgs[$args]) {
-						$entry = findToken($args);
-						$result[] = getMemoryRegister($entry) . '9';
-						$result[] = [$entry, 'top'];
-						$result[] = [$entry, 'bottom'];
-					} else {
-						$result[] = 'F9';
-						$result[] = [$args, 'top'];
-						$result[] = [$args, 'bottom'];
-					}
+					$entry = findToken($args);
+					$result[] = getMemoryRegister($entry) . '9';
+					$result[] = [&$entry, 'top'];
+					$result[] = [&$entry, 'bottom'];
 					break;
 
 				case "ENTRY":
@@ -332,10 +321,6 @@
 
 				case "MOV":
 					[$src, $dest] = expTrim('->' , $args);
-					preg_match("/^.*\((?<args>\d{2,4})\)$/", $dest, $argMatch);
-					if(count($argMatch) > 0) {
-						$dest = expTrim('(', $dest)[0];
-					}
 					if($REGISTERS[strtoupper($src)] && $REGISTERS[strtoupper($dest)]) {
 						$result[] = $REGISTERS[strtoupper($src)] . $REGISTERS[strtoupper($dest)];
 					} else if($REGISTERS[$src]) {
@@ -344,9 +329,6 @@
 						fetchExpression($src, $REGISTERS[$dest]);
 					} else {
 						error("\nInvalid MOV Command: " . $args);
-					}
-					if(count($argMatch) > 0) {
-						writeRaw($argMatch['args']);
 					}
 					break;
 				
@@ -695,33 +677,33 @@
 					break;
 
 				case "ALU":
-					preg_match("/^(?<leftReg>[\w]{1,3})\s*(?<operation>\!\=|\>\=?|\<\=?|\=\=|\+|\-|\*|\/|\&|\||\^)\s*(?<rightReg>\w{1,3})\s*\-\>\s*(?<destReg>\w{1,3})$/", $args, $aluMatch);
+					preg_match("/^(?<leftReg>\w{1,2})\s*(?<operation>\!\=|\>\=?|\<\=?|\=\=|\+|\-|\*|\/|\&|\||\^)\s*(?<rightReg>\w{1,2})\s*\-\>\s*(?<destReg>\w{1,2})$/", $args. $aluMatch);
 					if(count($aluMatch) > 0) {
-						if(is_numeric($aluMatch['rightReg']) && intval($aluMatch['rightReg']) >= 0 && intval($aluMatch['rightReg']) < 8) {
+						if(intval($aluMatch['rightReg']) >= 0 && intval($aluMatch['rightReg']) < 8) {
 							$rightReg = '0';
 							$quickMath = substr($aluMatch['rightReg'], -1);
 						} else {
 							$rightReg = $REGISTERS[$aluMatch['rightReg']];
 							$quickMath = '0';
-							if(is_null($rightReg)) {
+							if(empty($rightReg)) {
 								error("Invalid alu argument: \"". $aluMatch['rightReg'] . "\"\n");
 							}
 						}
 						$leftReg = $REGISTERS[$aluMatch['leftReg']];
 						$destReg = $REGISTERS[$aluMatch['destReg']];
 						$operation = $ALU_OPS[$aluMatch['operation']];
-						if(is_null($leftReg)) {
+						if(empty($leftReg)) {
 							error("Invalid alu argument: \"". $aluMatch['leftReg'] . "\"\n");
 						}
-						if(is_null($destReg)) {
+						if(empty($destReg)) {
 							error("Invalid alu argument: \"". $aluMatch['destReg'] . "\"\n");
 						}
-						if(is_null($operation)) {
+						if(empty($operation)) {
 							error("Invalid alu operator: \"". $aluMatch['operation'] . "\"\n");
 						}
 						
-						$result[] = 'C' . $destReg;
-						$result[] =  $leftReg . $rightReg;
+						$result[] = 'C' . $aluMatch['destReg'];
+						$result[] =  $aluMatch['leftReg'] . $aluMatch['rightReg'];
 						$result[] = $operation . $quickMath;
 					} else {
 						error("Malformed alu operation: \"". $args . "\"\n");
