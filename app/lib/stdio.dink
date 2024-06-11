@@ -1,0 +1,41 @@
+
+
+CONST putchar: *char = 0xFF02
+CONST getchar: *char = 0xFF04
+
+
+FUNC print(str: *char): word
+	DEFINE index: word = 0
+	WHILE str[index] != 0
+		SET *putchar = str[index]
+		ALU index + 1
+	ENDWHILE
+	RETURN index
+ENDFUNC
+
+FUNC println(str: *char): word
+	CALL print(str)
+	SET *putchar = '\\n'
+	RETURN !returnVal
+ENDFUNC
+
+FUNC scanline(str: *char): word
+	DEFINE index: word = 0
+	DEFINE character: char = getchar
+	
+	WHILE character != '\\n'
+		IF character != 0
+			SET *putchar = character
+			IF character == 8
+				ALU index - 1
+			ELSE
+				SET str[index] = character
+				ALU index + 1
+			ENDIF
+		ENDIF
+		SET character = getchar
+	ENDWHILE
+	SET *putchar = '\\n'
+	SET str[index] = 0
+	RETURN index
+ENDFUNC

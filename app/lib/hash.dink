@@ -1,0 +1,10 @@
+
+// Hashing
+
+FUNC hash(str: *char, length: word): word
+	DEFINE index: word = 0
+	DEFINE accumulator: word = 0;
+	WHILE index < length
+		SET accumulator = 0
+	ENDWHILE
+ENDFUNC

@@ -4,35 +4,21 @@
 	
 
 	$sourceCode = "
-	DEFINE string: char = \"Ciao Mondo\\n\"
+	#INCLUDEIFNOT 'lib/stdio.dink'
+	#INCLUDEIFNOT 'lib/string.dink'
 
-	FUNC substr(src: *char, start: word, length: word): *char
-		DEFINE dest: *char = 0x8000
-		DEFINE index: word = 0
-		WHILE src[start] != 0
-			IF start == length
-				RETURN dest
-			ENDIF
-			SET dest[index] = src[start]
-			ALU index + 1
-			ALU start + 1
-		ENDWHILE
-		RETURN dest
-	ENDFUNC
-	
-	
-	FUNC print(str: *char): word
-		CONST putchar: *char = 0xFF02
-		DEFINE index: word = 0
-		WHILE str[index] != 0
-			SET *putchar = str[index]
-			ALU index + 1
-		ENDWHILE
-		RETURN index
-	ENDFUNC
+	DEFINE stwing: *char = (char)[40]
+
+	DEFINE string2: *char = \"Cia\"
 
 	FUNC main()
-		CALL print(&string)
+		CALL scanline(&stwing)
+		CALL str_cmp(&stwing, &string2)
+		IF !returnVal
+			SET *putchar = 'T'
+		ELSE
+			SET *putchar = 'F'
+		ENDIF
 	ENDFUNC
 	";
 
@@ -80,17 +66,17 @@
 	$CMP_FLAGS = [
 		'==' => '01',
 		'>' => '02',
-		'>=' => '03',
+		'>=' => '80',
 		'<' => '04',
-		'<=' => '05',
+		'<=' => '40',
 		'!=' => '08'
 	];
 
 	$CMP_FLAGS_INVERTED = [
 		'==' => '08',
-		'>' => '05',
+		'>' => '40',
 		'>=' => '04',
-		'<' => '03',
+		'<' => '80',
 		'<=' => '02',
 		'!=' => '01'
 	];
@@ -110,6 +96,32 @@
 	$scopeTracker = [];
 	
 	$lineNumber = 0;
+
+
+	$includeList = [];
+	$sourceCode = linker($sourceCode);
+
+	function linker($source) {
+		global $includeList;
+
+		$test = preg_match_all("/\#INCLUDE(?<if>IFNOT)?\s+[\'\"](?<filePath>\S+)[\'\"]/", $source, $links);
+		for($i=0; $i<$test; $i++) {
+			$filePath = $links['filePath'][$i];
+			if(!array_key_exists($filePath, $includeList)) {
+				$includeList[$filePath] = file_get_contents($filePath);
+				$includeList[$filePath] = linker($includeList[$filePath]);
+				if($links['if'][$i] == 'IFNOT') {
+					$source = preg_replace("/\#INCLUDEIFNOT\s+[\'\"](?:\S+)[\'\"]/", $includeList[$filePath], $source, 1);
+					continue;
+				}
+			}
+			if(empty($links['if'][$i])) {
+				$source = preg_replace("/\#INCLUDE\s+[\'\"](?<filePath>\S+)[\'\"]/", $includeList[$filePath], $source);
+			}
+		}
+		return $source;
+	}
+
 
 	$lines = expTrim("\n", $sourceCode);
 	foreach($lines as $line) {
@@ -132,7 +144,7 @@
 					//Valdiate varName
 					preg_match("/^[a-zA-Z]([A-Za-z_\d]+)?$/", $varName, $varMatch);
 					if(count($varMatch) == 0) {
-						throw new Exception("\nLine Number: " . $lineNumber . "  Invalid const name " . $varName . "\n");
+						error("Invalid const name " . $varName . "\n");
 					}
 					if(in_array($type, ['*char', '*word'])) {
 						$address_type = 'global';
@@ -163,10 +175,10 @@
 					//Valdiate varName
 					preg_match("/^[a-zA-Z_](?:[A-Za-z_\d]+)?$/", $varName, $varMatch);
 					if(count($varMatch) == 0) {
-						throw new Exception("\nLine Number: " . $lineNumber . "  Invalid variable name \"" . $varName . "\"\n");
+						error("Invalid variable name \"" . $varName . "\"\n");
 					}
 					if(array_key_exists($varName, $stackFrame) || array_key_exists($varName, $stack)) {
-						throw new Exception("\nLine Number: " . $lineNumber . " Variable already defined: \"" . $varName . "\"\n");
+						error("Variable already defined: \"" . $varName . "\"\n");
 					}
 
 					$size = $TYPES[$type];
@@ -231,14 +243,19 @@
 					
 					preg_match("/(?<varName>[\&\*]?[^\s\[\]]+)(?:\[(?<index>[^\s\[\]]+)\])?/", $leftToken, $leftMatches);
 					$left = findToken($leftMatches['varName']);
+
+					$assignmentType = $left['type'];
+					if(!empty($leftMatches['index'])) {
+						$assignmentType = str_replace('*', '', $assignmentType);
+					}
 					
 					//Look for a type casting
 					preg_match("/^\((?<type>\*?char|\*?word)\)\s*(?<literal>.+)$/", $rightToken, $typeMatch);
 					if(empty($typeMatch['type'])) {
 						//If no type is boldly cast, then make it match the type of the destination
-						$rightToken = '(' . $left['type'] . ')' . $rightToken;
+						$rightToken = '(' . $assignmentType . ')' . $rightToken;
 					}
-					[$assignmentReg, $right] = fetchToken($rightToken);
+					[$assignmentReg, $right] = fetchExpression($rightToken)
 					
 					setToken($leftToken, $assignmentReg);
 					
@@ -267,32 +284,65 @@
 					break;
 				
 				case "IF":
-					$conditionalCount = count(array_filter($stackFrame, fn($var) => $var['type'] == 'conditional'));
-					$conditionalId = 'if-' . $conditionalCount;
-					$conditional = [
-						'exit_id' => $conditionalId . '-exit'
-					];
-					$comparator = parseBooleanExpr($args);
-					$result[] = 'EC';
-					$result[] = $CMP_FLAGS_INVERTED[$comparator];
-					
-					$result[] = 'F9';
-					$result[] = [$conditional['exit_id'], 'top'];
-					$result[] = [$conditional['exit_id'], 'bottom'];
-
-					$conditional['exit'] = parseLiteral(count($result));
+					[$conditional] = insertConditional($args);
 					$scopeTracker[] = $conditional;
 					break;
 
+				case "ELSEIF":
+				case "ELSE":
+					if($scopeTracker > 0) {
+						$conditional = end($scopeTracker);
+						if($conditional['type'] == 'conditional') {
+							//Insert an unconditional jump to very end of the ifblock
+							$result[] = 'EC';
+							$result[] = '00';
+							$result[] = 'F9';
+							$result[] = [$conditional['conditionalId'] . '-exit', 'top'];
+							$result[] = [$conditional['conditionalId'] . '-exit', 'bottom'];
+
+							//Next block is now 
+							$nextId = $conditional['conditionalId'] . '-next-' . count($conditional['next']);
+							$stackFrame[$nextId] =  [
+								'name' => $nextId,
+								'val' => parseLiteral(count($result)),
+								'type' => 'conditional',
+								'address_type' => 'immediate',
+								'size' => 2
+							];
+
+							if($operation == 'ELSEIF') {
+								[$conditional] = insertConditional($args, $conditional);
+								$scopeTracker[count($scopeTracker)-1] = $conditional;
+							}
+						} else {
+							error("Unbalanced conditional blocks");
+						}
+					} else {
+						error("Unbalanced conditional blocks");
+					}
+					
+					break;
+
 				case "ENDIF":
-					$conditional = array_pop($scopeTracker);
-					$stackFrame[$conditional['exit_id']] =  [
-						'name' => $conditional['exit_id'],
-						'val' => parseLiteral(count($result)),
-						'type' => 'conditional',
-						'address_type' => 'immediate',
-						'size' => 2
-					];
+						$conditional = array_pop($scopeTracker);
+						$stackFrame[$conditional['conditionalId'] . '-exit'] =  [
+							'name' => $conditional['conditionalId'] . '-exit',
+							'val' => parseLiteral(count($result)),
+							'type' => 'conditional',
+							'address_type' => 'immediate',
+							'size' => 2
+						];
+						$nextId = $conditional['conditionalId'] . '-next-1';
+						if(!isset($stackFrame[$nextId])) {
+							$stackFrame[$nextId] =  [
+								'name' => $nextId,
+								'val' => parseLiteral(count($result)),
+								'type' => 'conditional',
+								'address_type' => 'immediate',
+								'size' => 2
+							];
+						}
+						
 					break;
 
 
@@ -395,11 +445,19 @@
 						$result[] = 'FE'; 
 
 						$result[] = 'F9';	//JMP to the new function entry
-						$result[] = [&$func, 'top'];
-						$result[] = [&$func, 'bottom'];	
+						$result[] = [$func, 'top'];
+						$result[] = [$func, 'bottom'];	
 					} else {
-						throw new Exception("\nLine Number: " . $lineNumber . "  Function not found " . $varName . "\n");
+						error("Function not found " . $varName . "\n");
 					}
+
+					$stackFrame['!returnVal'] = [
+						'name' => '!returnVal',
+						'val' => parseLiteral($func['stack']['!return']['val']),
+						'type' => $func['stack']['!return']['type'],
+						'address_type' => 'stack',
+						'size' => $func['stack']['!return']['size']
+					];
 					
 					break;
 
@@ -429,10 +487,12 @@
 							'type' => 'func',
 							'address_type' => 'stack',
 							'size' => 2	//Set frame size to 2
+							
 						];
+
 						if(!empty($funcMatch['returnType'])) {
 							if(!in_array($funcMatch['returnType'], array_keys($TYPES))) {
-								throw new Exception("\n\tLine Number: " . $lineNumber . "  Invalid return type " . $funcMatch['returnType'] . "\n");
+								error("Invalid return type " . $funcMatch['returnType'] . "\n");
 							}
 							
 							$stackFrame['frame']['size'] += $TYPES[$funcMatch['returnType']];
@@ -451,7 +511,7 @@
 							
 							preg_match("/^[a-zA-Z_](?:[A-Za-z_\d]+)?$/", $varName, $varMatch);
 							if(count($varMatch) == 0) {
-								throw new Exception("\nLine Number: " . $lineNumber . "  Invalid parameter name \"" . $varName . "\"\n");
+								error("Invalid parameter name \"" . $varName . "\"\n");
 							}
 
 							$stackFrame['frame']['size'] += $TYPES[$type];
@@ -466,7 +526,7 @@
 						}
 						
 						$result[] = 'E5';
-						$result[] = [&$stackFrame['frame'], function($frame) {
+						$result[] = ['frame', function($frame) {
 							return bottom(['val' => str_pad(dechex($frame['size']), 2, '0', STR_PAD_LEFT)]);
 						}];
 						$result[] = "CA";
@@ -474,16 +534,27 @@
 						$result[] = "40";
 						
 					} else {
-						throw new Exception("\n\tLine Number: " . $lineNumber . " Invalid FUNC Definition\n");
+						error("Invalid FUNC Definition\n");
 					}
 					break;
 				
 				case "RETURN":
 					preg_match("/^(?<returnToken>.*)$/", $args, $returnMatch);
 					
-					[$assignmentReg, $ret] = fetchToken($returnMatch['returnToken']);
-					
-					setToken('!return', $assignmentReg);
+					$returnToken = $returnMatch['returnToken'];
+					if(!empty($returnToken)) {
+						//Look for a type casting
+						preg_match("/^\((?<type>\*?char|\*?word)\)\s*(?<literal>.+)$/", $returnToken, $typeMatch);
+						if(empty($typeMatch['type'])) {
+							$type = $stackFrame['!return']['type'];
+							//If no type is boldly cast, then make it match the type of the destination
+							$returnToken = '(' . $type . ')' . $returnToken;
+						}
+
+						[$assignmentReg, $ret] = fetchToken($returnToken);
+						
+						setToken('!return', $assignmentReg);
+					}
 
 					//Exit the function
 					//Move stack pointer back down
@@ -493,7 +564,7 @@
 					}];
 					$result[] = "CA";
 					$result[] = "A5";
-					$result[] = "30";	//Add it to the pointer
+					$result[] = "30";	//Add it to the stack pointer
 
 					$result[] = 'EC';	//Clear jmp flags
 					$result[] = '00';
@@ -514,7 +585,7 @@
 							[$ref, $post] = $byte;
 							if(gettype($ref) == 'string') {
 								if(in_array($ref, array_keys($stackFrame))) {
-									if($stackFrame[$ref]['type'] == 'loop') {
+									if(in_array($stackFrame[$ref]['type'], ['loop', 'conditional', 'func', 'return']) || $stackFrame[$ref]['return']) {
 										$result[$i] = $post($stackFrame[$ref]);
 									} else {
 										//Write reference to variable on stack as a positive offset based on frame size
@@ -522,7 +593,7 @@
 									}
 								}
 								else {
-									throw new Exception("\n\tBack Reference to a variable outside of current stack \"". $ref . "\"\n");
+									error("Undefined reference to a variable outside of scope \"". $ref . "\"\n");
 								}
 							} 
 						}
@@ -569,19 +640,22 @@
 							
 							setToken($aluMatch['varName'], $assignmentReg);
 						} else {
-							throw new Exception("\n\tLine Number: " . $lineNumber . " Cannot do a quick alu operation with this kind of variable: \"". $aluMatch['immediate'] . "\"\n");
+							error("Cannot do a quick alu operation with this kind of variable: \"". $aluMatch['immediate'] . "\"\n");
 						}
 							
 					} else {
-						throw new Exception("\n\tLine Number: " . $lineNumber . " Malformed alu operation: \"". $aluMatch['immediate'] . "\"\n");
+						error("Malformed alu operation: \"". $aluMatch['immediate'] . "\"\n");
 					}
+					break;
+
+				case "#INCLUDE":
 					break;
 			}
 		}
 	}
 
 	if(count($scopeTracker) > 1) {
-		throw new Exception("\n\Unclosed Functions\n");
+		error("Unclosed Functions\n");
 	}
 
 
@@ -672,7 +746,7 @@
 			$opCode .= $assignmentReg;
 			$result[] = $opCode;
 			
-			if(count($scopeTracker) > 0 && $right['address_type'] == 'stack') {
+			if(count($scopeTracker) > 0 && $right['address_type'] == 'stack' && $right['name'] != '!returnVal') {
 				$result[] = [$right['name'], 'top'];
 				$result[] = [$right['name'], 'bottom'];
 			} else {
@@ -739,14 +813,19 @@
 	}
 
 
-	//load the left and right elements of a boolean expression into 2 separate registers and then do an ALU OR to NUL on them
-	function parseBooleanExpr($expr) {
+	function fetchExpression($expr, $assignmentReg = null) {
 		global $result;
 		global $lineNumber;
 
-		[$leftToken, $rightToken] = preg_split("/[\!\=\>\<]{1,2}/", $expr);
+		preg_match("/^(.+)(?<operation>\!\=|\>\=?|\<\=?|\=\=|\+|\-|\*|\/|\&|\||\^)(.+)/", $expr, $exprMatch);
+		if($exprMatch) {
+			[$leftToken, $rightToken] = split($expressionSplit, $expr);
+		} else {
+			$leftToken = trim($expr);
+		}
+
+		[$leftToken, $rightToken] = split($expressionSplit, $expr);
 		$leftToken = trim($leftToken);
-		$rightToken = trim($rightToken);
 		if(strtoupper($leftToken) == 'TRUE') {
 			$leftToken = '(char)1';
 		} else if(strtoupper($leftToken) == 'FALSE') {
@@ -754,6 +833,8 @@
 		}
 		if(is_null($rightToken)) {
 			$rightToken = '(char)1';
+		} else {
+			$rightToken = trim($rightToken);
 		}
 		
 		//$left = findToken($leftToken);
@@ -774,7 +855,50 @@
 		
 		preg_match("/^\S+\s*(?:(?<condition>[\!\=\>\<]{1,2})\s*\S+)?$/", $expr, $boolMatch);
 		if(count($boolMatch) == 0) {
-			throw new Exception("\nLine Number: " . $lineNumber . "  Invalid boolean expression: \"" . $expr . "\"\n");
+			error("Invalid boolean expression: \"" . $expr . "\"\n");
+		} else if(empty($boolMatch['condition'])) {
+			return '==';
+		}
+		return [$assignmentReg, $right];
+	}
+
+	//load the left and right elements of a boolean expression into 2 separate registers and then do an ALU OR to NUL on them
+	function parseBooleanExpr($expr) {
+		global $result;
+		global $lineNumber;
+
+		[$leftToken, $rightToken] = preg_split("/(\!\=|\>\=?|\<\=?|\=\=)/", $expr);
+		$leftToken = trim($leftToken);
+		if(strtoupper($leftToken) == 'TRUE') {
+			$leftToken = '(char)1';
+		} else if(strtoupper($leftToken) == 'FALSE') {
+			$leftToken = '(char)0';
+		}
+		if(is_null($rightToken)) {
+			$rightToken = '(char)1';
+		} else {
+			$rightToken = trim($rightToken);
+		}
+		
+		//$left = findToken($leftToken);
+		//$leftToken = '(' . $left['type'] . ')' . $leftToken;
+		[$leftReg, $left] = fetchToken($leftToken);
+		$rightReg = ($leftReg == '5') ? '6' : '8';
+		
+		preg_match("/^\((?<type>\*?char|\*?word)\)\s*(?<literal>.+)$/", $rightToken, $typeMatch);
+		if(count($typeMatch) == 0) {
+			$rightToken = '(' . str_replace('*', '', $left['type']) . ')' . $rightToken;
+		}
+		[$rightReg, $right] = fetchToken($rightToken, $rightReg);
+
+
+		$result[] = 'C0'; //Compare the 2 values and save to null
+		$result[] = $leftReg . $rightReg;
+		$result[] = '10';
+		
+		preg_match("/^\S+\s*(?:(?<condition>[\!\=\>\<]{1,2})\s*\S+)?$/", $expr, $boolMatch);
+		if(count($boolMatch) == 0) {
+			error("Invalid boolean expression: \"" . $expr . "\"\n");
 		} else if(empty($boolMatch['condition'])) {
 			return '==';
 		}
@@ -814,7 +938,7 @@
 
 
 		//Match to an ascii character literal
-		preg_match("/^\'(\S)\'$/", $literal, $charMatch);
+		preg_match("/^\'([\S\s]{1,2})\'$/", $literal, $charMatch);
 		if(count($charMatch) > 1) {
 			$charMatch[1] = str_replace("\\n", "\n", $charMatch[1]);
 			$charMatch[1] = str_replace("\\0", "\0", $charMatch[1]);
@@ -912,7 +1036,7 @@
 					'address_type' => 'immediate'
 				];
 			} else {
-				throw new Exception("\nLine Number: " . $lineNumber . "  Undefined: \"" . $token . "\"\n");
+				error("Undefined: \"" . $token . "\" not found\n");
 			}
 		}
 
@@ -931,9 +1055,36 @@
 		return $return;
 	}
 
+	function insertConditional($booleanExpr, $conditional = null) {
+		global $stackFrame;
+		global $result;
+		global $CMP_FLAGS_INVERTED;
+
+		if(is_null($conditional)) {
+			$conditional = [
+				'type' => 'conditional',
+				'conditionalId' => ('if-' . rand(1000, 9999999)),
+				'next' => []
+			];
+		}
+
+		$comparator = parseBooleanExpr($booleanExpr);
+		$result[] = 'EC';
+		$result[] = $CMP_FLAGS_INVERTED[$comparator];
+		
+		$nextId = $conditional['conditionalId'] . '-next-' . (count($conditional['next'])+1);
+		$result[] = 'F9';
+		$result[] = [$nextId, 'top'];
+		$result[] = [$nextId, 'bottom'];
+		
+		$exitLabel = parseLiteral(count($result));
+		$conditional['next'][] = $exitLabel;
+		return [$conditional];
+	}
+
 
 	if(count($scopeTracker) > 0) {
-		throw new Exception("\n\tSyntax error - Unbalanced blocks\n");
+		error("Syntax error - Unbalanced blocks\n");
 	}
 
 	//Post Processing
@@ -962,6 +1113,41 @@
 		echo ' ';
 	}
 
+	function error($msg) {
+		global $lineNumber;
+
+		echo "Compile Error on Line: " . $lineNumber . "\n<br/>";
+		echo $msg;
+
+		printSourceCode($lineNumber);
+		exit;
+	}
+
+	function printSourceCode($lineNumber = null) {
+		global $sourceCode;
+
+		$formattedCode = preg_replace("/\\r(?!\\n)/", "\n\r", $sourceCode);
+		$lines = explode("\n", $formattedCode);
+
+		echo "<pre>";
+		foreach($lines as $number => $line) {
+			$num = $number + 1;
+			echo "<span style='background-color: grey;'>";
+			echo $num . "\t";
+			echo "</span>";
+			if($lineNumber == $num) {
+				echo "<span style='background-color: red; color: white;'>";
+			}
+			echo $line;
+			if($lineNumber == $num) {
+				echo "</span>";
+			} else if(substr($line, -1) != "\n") {
+				echo "\n";
+			}
+
+		}
+		echo "</pre>";
+	}
 
 
 	//split and trim a string

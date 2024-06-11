@@ -1,0 +1,33 @@
+//Get String length
+FUNC str_len(str: *char): word
+	DEFINE index: word = 0
+	WHILE str[index] != 0
+		ALU index + 1
+	ENDWHILE
+	RETURN index
+ENDFUNC
+
+
+//String compare
+FUNC str_cmp(left: *char, right: *char): char
+	DEFINE index: word = 0
+	WHILE left[index] == right[index]
+		IF left[index] == 0
+			RETURN TRUE
+		ENDIF
+		ALU index+1
+	ENDWHILE
+	RETURN FALSE
+ENDFUNC
+
+
+
+//Copy a string
+FUNC str_copy(src: *char, dest: *char)
+	DEFINE index: word = 0
+	WHILE src[index] != 0
+		SET dest[index] = src[index]
+		ALU index+1
+	ENDWHILE
+	dest[index] = 0
+ENDFUNC
