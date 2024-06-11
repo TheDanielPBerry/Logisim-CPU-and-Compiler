@@ -8,13 +8,9 @@
 	//DEFINE string2: *char = \"Cia\"
 
 	$sourceCode = "
-	#INCLUDEIFNOT 'lib/stdio.dink'
-	DEFINE color: *char = \"abc\"
-
-	FUNC main()
-		CALL print(&color)
-	ENDFUNC
+		#INCLUDE \"main.dink\"
 	";
+
 
 
 	$TYPES = [
@@ -318,6 +314,14 @@
 						'size' => 2
 					];
 					break;
+				
+				case "STRUCT":
+					$newType = [
+						'name' => $args,
+						'size' => 0,
+						'type' => '123'
+					];
+					break;
 
 
 				case "GOTO":
@@ -326,8 +330,8 @@
 				case "JMP":
 					$entry = findToken($args);
 					$result[] = getMemoryRegister($entry) . '9';
-					$result[] = [&$entry, 'top'];
-					$result[] = [&$entry, 'bottom'];
+					$result[] = [$entry, 'top'];
+					$result[] = [$entry, 'bottom'];
 					break;
 
 				case "MOV":
@@ -645,6 +649,7 @@
 
 
 				case "ENDFUNC":
+					//print_r($scopeTracker);
 					//Calculate all local vars and param offsets based on text
 	 				for($i = $stackFrame['frame']['val']; $i < count($result); $i++) {
 						$byte = $result[$i];

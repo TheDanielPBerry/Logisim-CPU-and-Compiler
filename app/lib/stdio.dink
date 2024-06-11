@@ -6,13 +6,13 @@ CONST getchar: *char = 0xFF04
 
 FUNC print(str: *char): word
 	MOV str -> IDX
-	ENTRY :loop
+	ENTRY :loop_print
 		MOV MIX -> A (0000)
 		ALU A | 0 -> NUL
 		JE :exit_print
 		MOV A -> *putchar
 		ALU IDX + 1 -> IDX
-	GOTO :loop
+	GOTO :loop_print
 	ENTRY :exit_print
 	//DEFINE index: word = 0
 	//WHILE str[index] != 0
@@ -27,6 +27,7 @@ FUNC println(str: *char): word
 	SET *putchar = '\\n'
 	RETURN !returnVal
 ENDFUNC
+
 
 FUNC scanline(str: *char): word
 	DEFINE index: word = 0
@@ -47,4 +48,20 @@ FUNC scanline(str: *char): word
 	SET *putchar = '\\n'
 	SET str[index] = 0
 	RETURN index
+ENDFUNC
+
+
+//Written in assembler for speed sake
+FUNC print_word(num: word)
+	CONST convert_digit: *word = 0xFF10
+	CONST digit: *char = 0xFF12
+	SET *convert_digit = num
+
+	ENTRY :loop_print_word
+		MOV digit -> A
+		ALU A | 0 -> NUL
+		JE :return_print_word
+		MOV A -> *putchar
+	GOTO :loop_print_word
+	ENTRY :return_print_word
 ENDFUNC

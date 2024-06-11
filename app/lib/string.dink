@@ -31,3 +31,23 @@ FUNC str_copy(src: *char, dest: *char)
 	ENDWHILE
 	dest[index] = 0
 ENDFUNC
+
+
+//Written in assembler for speed sake
+FUNC word_to_string(num: word): *char
+	CONST convert_digit: *word = 0xFF10
+	CONST digit: *char = 0xFF12
+	CONST str: *char = 0x8000
+	SET *convert_digit = num
+
+	MOV (word)0x8000 -> IDX
+	ENTRY :loop_word_to_string
+		MOV digit -> A
+		MOV A -> MIX (0000)
+		ALU A | 0 -> NUL
+		JE :return_word_to_string
+		ALU IDX+1 -> IDX
+	GOTO :loop_word_to_string
+	ENTRY :return_word_to_string
+	RETURN &str
+ENDFUNC

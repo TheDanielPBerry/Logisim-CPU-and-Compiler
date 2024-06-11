@@ -1,0 +1,11 @@
+
+#INCLUDEIFNOT 'lib/stdio.dink'
+#INCLUDEIFNOT 'lib/string.dink'
+DEFINE input: *char = (char)[256]
+DEFINE prompt: *char = "\n> "
+
+FUNC main()
+	CONST set_num: *char = 0xFF10
+	SET *set_num = (word)42069
+	CALL print(0xFF14)
+ENDFUNC
