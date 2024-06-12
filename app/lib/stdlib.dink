@@ -1,0 +1,35 @@
+CONST HEAP_POINTER: word = 0x8000
+DEFINE end_of_heap: *word = 0x8000
+CONST MEM_BLOCK_START: word = 0
+CONST MEM_BLOCK_LENGTH: word = 2
+CONST MEM_BLOCK_IN_USE: word = 4
+CONST MEM_BLOCK_SIZE: word = 5
+
+FUNC init_heap()
+	SET HEAP_POINTER[MEM_BLOCK_START] = HEAP_POINTER
+	SET HEAP_POINTER[MEM_BLOCK_LENGTH] = 4096
+	SET (char)HEAP_POINTER[MEM_BLOCK_IN_USE] = (char)1
+	SET end_of_heap = end_of_heap + MEM_BLOCK_SIZE
+ENDFUNC
+
+FUNC malloc(size: word): *word
+	DEFINE heap_entry: *word = end_of_heap
+	//DEFINE adjacentFree: word = 0
+	
+	//WHILE heap_entry > (*word)HEAP_POINTER
+	//	IF heap_entry[MEM_BLOCK_IN_USE] == 0
+	//		SET adjacentFree = adjacentFree + heap_entry[
+	//	ELSE
+	//		heap_entry
+	//	ENDIF
+	//	SET heap_entry = heap_entry - MEM_BLOCK_SIZE
+	//ENDWHILE
+
+	//Initialize new block
+	SET heap_entry = end_of_heap + MEM_BLOCK_SIZE
+	SET heap_entry[MEM_BLOCK_START] = end_of_heap[MEM_BLOCK_START] + end_of_heap[MEM_BLOCK_LENGTH]
+	SET heap_entry[MEM_BLOCK_LENGTH] = size
+	SET HEAP_POINTER[MEM_BLOCK_IN_USE] = (char)1
+	SET end_of_heap = heap_entry
+	RETURN end_of_heap[MEM_BLOCK_START]
+ENDFUNC

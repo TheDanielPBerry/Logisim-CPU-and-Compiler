@@ -15,7 +15,7 @@ FUNC str_cmp(left: *char, right: *char): char
 		IF left[index] == 0
 			RETURN TRUE
 		ENDIF
-		SET index = index+1
+		SET index = index + 1
 	ENDWHILE
 	RETURN FALSE
 ENDFUNC

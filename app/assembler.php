@@ -2,23 +2,16 @@
 	error_reporting(E_ERROR);
 
 	
-	//
-	//#INCLUDEIFNOT 'lib/string.dink'
-	//DEFINE stwing: *char = (char)[40]
-	//DEFINE string2: *char = \"Cia\"
-
 	$sourceCode = "
 		#INCLUDE \"main.dink\"
 	";
-
-
-
+	
 	$TYPES = [
-		'char' => 1,
-		'word' => 2,
-		'*char' => 2,
-		'*word' => 2,
-		'func' => 2
+		'char' => ['size' => 1],
+		'word' => ['size' => 2],
+		'*char' => ['size' => 2],
+		'*word' => ['size' => 2],
+		'func' => ['size' => 2]
 	];
 
 	$ALU_OPS = [
@@ -174,7 +167,7 @@
 						'val' => parseLiteral($rightToken),
 						'type' => $type,
 						'address_type' => $address_type,
-						'size' => $TYPES[$type]
+						'size' => $TYPES[$type]['size']
 					];
 					break;
 
@@ -191,7 +184,7 @@
 						error("Variable already defined: \"" . $varName . "\"\n");
 					}
 
-					$size = $TYPES[$type];
+					$size = $TYPES[$type]['size'];
 					
 					if(empty($rightToken)) {
 						//If no assignment given, then initialize as 0
@@ -319,7 +312,7 @@
 					$newType = [
 						'name' => $args,
 						'size' => 0,
-						'type' => '123'
+						'type' => 'struct'
 					];
 					break;
 
@@ -476,31 +469,33 @@
 					if($func['type'] == 'func') {
 						$params = array_filter($func['stack'], fn($var) => $var['param']);
 						$args = expTrim(',', $call['args']);
-						foreach($args as $index => $argToken) {
-							$param = $func['stack'][array_keys($params)[$index]];
-							
-							//Look for a type casting
-							preg_match("/^\((?<type>\*?char|\*?word)\)\s*(?<literal>.+)$/", $argToken, $typeMatch);
-							if(count($typeMatch) == 0) {
-								$argToken = '(' . $param['type'] . ')' . $argToken;
-							}
-							
-							[$assignmentReg, $arg] = fetchToken($argToken);
-							
-							//Move fetched argument onto stack
-							$result[] = $assignmentReg . '2';
-							if($scopeTracker > 0  && $param['address_type'] == 'stack') {
-								if(gettype($param['val']) != 'string') {
-									$stackOffset = ['val' => parseLiteral($param['val'])];
-									$result[] = top($stackOffset);
-									$result[] = bottom($stackOffset);
+						if(!empty($args[0])) {
+							foreach($args as $index => $argToken) {
+								$param = $func['stack'][array_keys($params)[$index]];
+								
+								//Look for a type casting
+								preg_match("/^\((?<type>\*?char|\*?word)\)\s*(?<literal>.+)$/", $argToken, $typeMatch);
+								if(count($typeMatch) == 0) {
+									$argToken = '(' . $param['type'] . ')' . $argToken;
+								}
+								
+								[$assignmentReg, $arg] = fetchToken($argToken);
+								
+								//Move fetched argument onto stack
+								$result[] = $assignmentReg . '2';
+								if($scopeTracker > 0  && $param['address_type'] == 'stack') {
+									if(gettype($param['val']) != 'string') {
+										$stackOffset = ['val' => parseLiteral($param['val'])];
+										$result[] = top($stackOffset);
+										$result[] = bottom($stackOffset);
+									} else {
+										$result[] = [$param, 'top'];
+										$result[] = [$param, 'bottom'];
+									}
 								} else {
 									$result[] = [$param, 'top'];
 									$result[] = [$param, 'bottom'];
 								}
-							} else {
-								$result[] = [$param, 'top'];
-								$result[] = [$param, 'bottom'];
 							}
 						}
 
@@ -566,11 +561,11 @@
 								error("Invalid return type " . $funcMatch['returnType'] . "\n");
 							}
 							
-							$stackFrame['frame']['size'] += $TYPES[$funcMatch['returnType']];
+							$stackFrame['frame']['size'] += $TYPES[$funcMatch['returnType']]['size'];
 							$stackFrame['!return'] = [
 								'val' => $stackFrame['frame']['size'] * -1,
 								'type' => $funcMatch['returnType'],
-								'size' => $TYPES[$funcMatch['returnType']],
+								'size' => $TYPES[$funcMatch['returnType']]['size'],
 								'address_type' => 'stack'
 							];
 						}
@@ -585,13 +580,13 @@
 								error("Invalid parameter name \"" . $varName . "\"\n");
 							}
 
-							$stackFrame['frame']['size'] += $TYPES[$type];
+							$stackFrame['frame']['size'] += $TYPES[$type]['size'];
 							$stackFrame[$varName] = [
 								'name' => $varName,
 								'val' => $stackFrame['frame']['size'] * -1,
 								'type' => $type,
 								'address_type' => 'stack',
-								'size' => $TYPES[$type],
+								'size' => $TYPES[$type]['size'],
 								'param' => true
 							];
 						}
@@ -777,7 +772,7 @@
 		//Look for a type casting
 		preg_match("/^\((?<type>(\*)?(?:char|word))\)\s*(?<token>.+)$/", $rightToken, $typeMatch);
 		if(count($typeMatch) > 0) {
-			$assignmentSize ??= $TYPES[$typeMatch['type']];
+			$assignmentSize ??= $TYPES[$typeMatch['type']]['size'];
 			$assignmentReg ??= ($assignmentSize <= 1 ? '5' : '7');
 		}
 		
@@ -810,7 +805,7 @@
 				$right = [
 					'val' => $right['val'],
 					'type' => $type,
-					'size' => $TYPES[$type],
+					'size' => $TYPES[$type]['size'],
 					'address_type' => 'index'
 				];
 			}
@@ -904,7 +899,7 @@
 		global $ALU_OPS;
 		global $CMP_FLAGS;
 
-		preg_match("/^(.+)(?<operation>\!\=|\>\=?|\<\=?|\=\=|\+|\-|\*|\/|\&|\||\^)(.+)/", $expr, $exprMatch);
+		preg_match("/^(.+)(?<operation>(?<!\()(\!\=|\>\=?|\<\=?|\=\=|\+|\-|\*|\/|\&|\||\^))(.+)$/", $expr, $exprMatch);
 		if(count($exprMatch)) {
 			[$leftToken, $rightToken] = expTrim($exprMatch['operation'], $expr);
 			if(strtoupper($leftToken) == 'TRUE') {
@@ -920,9 +915,9 @@
 			if(count($typeMatch) == 0) {
 				$rightToken = '(' . str_replace('*', '', $left['type']) . ')' . $rightToken;
 			}
-			$right = findToken($rightToken);
+			$right = findToken($rightToken, true);
 			
-			if($right['address_type'] == 'immediate' && intval($right['val']) < 8 && intval($right['val']) >= 0) {
+			if($right && $right['address_type'] == 'immediate' && intval($right['val']) < 8 && intval($right['val']) >= 0) {
 				$quickMath = substr($right['val'], -1);
 				$rightReg = '0';
 			} else {
@@ -1010,7 +1005,7 @@
 		//Look for a type casting
 		preg_match("/^\((?<type>\*?char|\*?word)\)\s*(?<literal>.+)$/", $literal, $typeMatch);
 		if(count($typeMatch) > 0) {
-			$size = $TYPES[$typeMatch['type']];
+			$size = $TYPES[$typeMatch['type']]['size'];
 			$literal = $typeMatch['literal'];
 		}
 
@@ -1074,7 +1069,7 @@
 
 
 
-	function findToken($token) {
+	function findToken($token, $noError = false) {
 		global $stack;
 		global $stackFrame;
 		global $TYPES;
@@ -1117,12 +1112,13 @@
 				$return = [
 					'val' => $literal,
 					'type' => $type,
-					'size' => $TYPES[$type],
+					'size' => $TYPES[$type]['size'],
 					'address_type' => 'immediate'
 				];
-			} else {
+			} else if(!$noError) {
 				error("Undefined: \"" . $token . "\" not found\n");
 			}
+			return false;
 		}
 
 		if($inference) {

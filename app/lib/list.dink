@@ -1,0 +1,16 @@
+#DEFINEIFNOT "lib/stdlib.dink"
+
+//ARRAY LIST
+CONST LIST_ENTRY_NEXT: word = 0
+CONST LIST_ENTRY_LAST: word = 2
+CONST LIST_ENTRY_ELEMENT: word = 4
+CONST LIST_ENTRY_SIZE: word = 6
+CONST LIST_ENTRY_LENGTH: word = 6
+
+FUNC push(list: *word, element: *word): word
+	DEFINE last_element: *word = list[LIST_ENTRY_LAST]
+ENDFUNC
+
+FUNC new_list()
+
+ENDFUNC

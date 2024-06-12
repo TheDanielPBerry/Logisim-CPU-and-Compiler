@@ -50,6 +50,26 @@ FUNC scanline(str: *char): word
 	RETURN index
 ENDFUNC
 
+FUNC scan_num(): word
+	CONST STRING_TO_NUM: *char = 0xFF1B
+	CONST CLEAR_STRING_TO_NUM: *char = 0xFF1C
+	CONST STRING_TO_NUM_RESULT: *char = 0xFF1D
+	SET *CLEAR_STRING_TO_NUM = 0
+
+	DEFINE character: char = getchar
+
+	WHILE character != '\\n'
+		IF character >= 0x30 
+			IF character <= 0x39 
+				SET *STRING_TO_NUM = character
+				SET *putchar = character
+			ENDIF
+		ENDIF
+		SET character = getchar
+	ENDWHILE
+	RETURN STRING_TO_NUM_RESULT
+ENDFUNC
+
 
 //Written in assembler for speed sake
 FUNC print_word(num: word)

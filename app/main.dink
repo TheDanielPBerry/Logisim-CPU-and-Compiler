@@ -1,11 +1,10 @@
 
-#INCLUDEIFNOT 'lib/stdio.dink'
-#INCLUDEIFNOT 'lib/string.dink'
+#INCLUDEIFNOT 'lib/stdlib.dink'
+
 DEFINE input: *char = (char)[256]
 DEFINE prompt: *char = "\n> "
 
 FUNC main()
-	CONST set_num: *char = 0xFF10
-	SET *set_num = (word)42069
-	CALL print(0xFF14)
+	CALL init_heap()
+	CALL malloc(128)
 ENDFUNC
