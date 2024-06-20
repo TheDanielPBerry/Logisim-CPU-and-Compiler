@@ -13,5 +13,5 @@ The compiler is written in PHP and will intake source code from the main.dink fi
 The code is compiled into machine code and written to the stdout.  
 
 ## Programming Language - main.dink
-The programming language has many influences taken from C such as: pointer types, array brackets indexing, if statements, while loops, and functions.  
+The programming language has many influences taken from C such as: pointer types, array brackets indexing, branching if statements, while loops, functions, file linking and scoped variables.  
 You can explore much of the standard library I wrote in the lib directory with functions for: linked lists, string operations, hashing, maths, memory allocation, and more.   
