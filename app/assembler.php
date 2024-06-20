@@ -412,8 +412,8 @@
 
 				case "WHILE":
 				case "LOOP":
-					$loopCount = count(array_filter($stackFrame, fn($var) => $var['type'] == 'loop'));
-					$loopId = 'loop-' . $loopCount;
+					//$loopCount = count(array_filter($stackFrame, fn($var) => $var['type'] == 'loop'));
+					$loopId = 'loop-' . rand(1000, 9999999);
 					$loop = [
 						'exit_id' => $loopId . '-exit',
 						'entry_id' => $loopId . '-entry',
@@ -697,9 +697,9 @@
 				case "ALU":
 					preg_match("/^(?<leftReg>[\w]{1,3})\s*(?<operation>\!\=|\>\=?|\<\=?|\=\=|\+|\-|\*|\/|\&|\||\^)\s*(?<rightReg>\w{1,3})\s*\-\>\s*(?<destReg>\w{1,3})$/", $args, $aluMatch);
 					if(count($aluMatch) > 0) {
-						if(is_numeric($aluMatch['rightReg']) && intval($aluMatch['rightReg']) >= 0 && intval($aluMatch['rightReg']) < 8) {
+						if(is_numeric($aluMatch['rightReg']) && intval($aluMatch['rightReg']) >= 0 && intval($aluMatch['rightReg']) < 14) {
 							$rightReg = '0';
-							$quickMath = substr($aluMatch['rightReg'], -1);
+							$quickMath = substr(parseLiteral($aluMatch['rightReg']), -1);
 						} else {
 							$rightReg = $REGISTERS[$aluMatch['rightReg']];
 							$quickMath = '0';
@@ -899,8 +899,8 @@
 		global $ALU_OPS;
 		global $CMP_FLAGS;
 
-		preg_match("/^(.+)(?<operation>(?<!\()(\!\=|\>\=?|\<\=?|\=\=|\+|\-|\*|\/|\&|\||\^))(.+)$/", $expr, $exprMatch);
-		if(count($exprMatch)) {
+		preg_match("/^(.+)(?<operation>\!\=|\>\=?|\<\=?|\=\=|\+|\-|\*|\/|\&|\||\^)(.+)$/", $expr, $exprMatch);
+		if(count($exprMatch) && $exprMatch[1] != '(') {
 			[$leftToken, $rightToken] = expTrim($exprMatch['operation'], $expr);
 			if(strtoupper($leftToken) == 'TRUE') {
 				$leftToken = '(char)1';
@@ -1117,8 +1117,9 @@
 				];
 			} else if(!$noError) {
 				error("Undefined: \"" . $token . "\" not found\n");
+			} else {
+				return false;
 			}
-			return false;
 		}
 
 		if($inference) {

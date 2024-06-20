@@ -1,0 +1,49 @@
+
+FUNC test_str_pos()	
+	//CALL init_heap()
+	CALL malloc(255)
+	DEFINE str1: *word = !returnVal
+	CALL malloc(255)
+	DEFINE str2: *word = !returnVal
+
+	WHILE TRUE
+		SET *putchar = (char)'1'
+		CALL print(&prompt)
+		CALL scanline(str1)
+		SET *putchar = (char)'2'
+		CALL print(&prompt)
+		CALL scanline(str2)
+		
+		CALL str_pos(str2, str1)
+		DEFINE position: word = !returnVal
+		CALL print_word(position)
+		SET *putchar = (char)10
+		SET *putchar = (char)10
+	ENDWHILE
+
+ENDFUNC
+
+FUNC test_str_cmp()	
+	//CALL init_heap()
+	CALL malloc(255)
+	DEFINE str1: *word = !returnVal
+	CALL malloc(255)
+	DEFINE str2: *word = !returnVal
+	DEFINE result: char = 0
+
+	WHILE TRUE
+		SET *putchar = (char)'1'
+		CALL print(&prompt)
+		CALL scanline(str1)
+		SET *putchar = (char)'2'
+		CALL print(&prompt)
+		CALL scanline(str2)
+		
+		CALL str_cmp(str2, str1)
+		SET result = (char)!returnVal + (char)0x30
+		SET *putchar = result
+		SET *putchar = (char)10
+		SET *putchar = (char)10
+	ENDWHILE
+
+ENDFUNC

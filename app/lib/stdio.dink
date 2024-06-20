@@ -4,6 +4,7 @@ CONST putchar: *char = 0xFF02
 CONST getchar: *char = 0xFF04
 
 
+
 FUNC print(str: *char): word
 	MOV str -> IDX
 	ENTRY :loop_print
@@ -28,6 +29,17 @@ FUNC println(str: *char): word
 	RETURN !returnVal
 ENDFUNC
 
+DEFINE breakpoint_string: *char = "Press <ENTER> to continue\n"
+FUNC breakpoint()
+	CALL print(&breakpoint_string)
+	MOV getchar -> A
+	ENTRY :loop_breakpoint
+		ALU A | 10 -> NUL
+		JE :exit_breakpoint
+		MOV getchar -> A
+	GOTO :loop_breakpoint
+	ENTRY :exit_breakpoint
+ENDFUNC
 
 FUNC scanline(str: *char): word
 	DEFINE index: word = 0

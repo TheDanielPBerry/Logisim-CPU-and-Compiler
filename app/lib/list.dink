@@ -2,15 +2,68 @@
 
 //ARRAY LIST
 CONST LIST_ENTRY_NEXT: word = 0
-CONST LIST_ENTRY_LAST: word = 2
-CONST LIST_ENTRY_ELEMENT: word = 4
+CONST LIST_ENTRY_ELEMENT: word = 2
+CONST LIST_ENTRY_PREV: word = 4
 CONST LIST_ENTRY_SIZE: word = 6
-CONST LIST_ENTRY_LENGTH: word = 6
+
+CONST LIST_FIRST: word = 0
+CONST LIST_ITERATOR: word = 2
+CONST LIST_LAST: word = 4
+CONST LIST_LENGTH: word = 6
+CONST LIST_SIZE: word = 8
 
 FUNC push(list: *word, element: *word): word
-	DEFINE last_element: *word = list[LIST_ENTRY_LAST]
+	DEFINE last_entry: *word = list[LIST_LAST]
+
+	CALL malloc(LIST_ENTRY_SIZE)
+	DEFINE new_entry: *word = !returnVal
+	
+	SET new_entry[LIST_ENTRY_NEXT] = 0
+	SET new_entry[LIST_ENTRY_ELEMENT] = element
+	SET new_entry[LIST_ENTRY_PREV] = last_entry
+
+	SET last_entry[LIST_ENTRY_NEXT] = new_entry
+	
+	SET list[LIST_LAST] = new_entry
+	SET list[LIST_LENGTH] = list[LIST_LENGTH] + 1
+
+	RETURN list[LIST_LENGTH]
 ENDFUNC
 
-FUNC new_list()
 
+FUNC pop(list: *word): *word
+	DEFINE last_entry: *word = list[LIST_LAST]
+	DEFINE new_last: *word = last_entry[LIST_ENTRY_PREV]
+	SET list[LIST_LENGTH] = list[LIST_LENGTH] - 1
+	SET list[LIST_LAST] = new_last
+	SET new_last[LIST_ENTRY_NEXT] = 0
+	RETURN last_entry[LIST_ENTRY_ELEMENT]
+ENDFUNC
+
+
+FUNC get(list: *word, index: word): *word
+	DEFINE list_entry: *word = list[LIST_FIRST]
+	DEFINE count: word = 0
+	
+	WHILE count < index
+		IF count >= list[LIST_LENGTH]
+			RETURN 0
+		ENDIF
+		SET list_entry = list_entry[LIST_ENTRY_NEXT]
+		SET count = count + 1
+	ENDWHILE
+
+	RETURN list_entry[LIST_ENTRY_ELEMENT]
+ENDFUNC
+
+
+FUNC new_list(): *word
+	CALL malloc(LIST_SIZE)
+	DEFINE new_list_entry: *word = !returnVal
+	SET new_list_entry[LIST_FIRST] = 0
+	SET new_list_entry[LIST_ITERATOR] = new_list_entry
+	SET new_list_entry[LIST_LAST] = new_list_entry
+	SET new_list_entry[LIST_LENGTH] = 0
+
+	RETURN new_list_entry
 ENDFUNC

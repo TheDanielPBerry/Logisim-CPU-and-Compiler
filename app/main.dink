@@ -1,10 +1,37 @@
 
+DEFINE prompt: *char = "> "
 #INCLUDEIFNOT 'lib/stdlib.dink'
+#INCLUDEIFNOT 'lib/stdio.dink'
+#INCLUDEIFNOT 'lib/string.dink'
+#INCLUDEIFNOT 'lib/math.dink'
+#INCLUDEIFNOT 'lib/hash.dink'
+#INCLUDEIFNOT 'lib/list.dink'
+#INCLUDEIFNOT 'lib/test.dink'
 
-DEFINE input: *char = (char)[256]
-DEFINE prompt: *char = "\n> "
+
+FUNC shell()
+	CALL malloc(255)
+	DEFINE input_str: *word = !returnVal
+	DEFINE num_in: word = 0
+	WHILE TRUE
+		CALL print(&prompt)
+		CALL scan_num()
+		SET *putchar = 10
+		SET num_in = !returnVal
+		CALL print_word(num_in)
+		SET *putchar = 10
+	ENDWHILE
+ENDFUNC
+
+FUNC calc()
+	CALL malloc(255)
+	DEFINE input_str: *word = !returnVal
+	WHILE TRUE
+		CALL scanline(input_str)
+
+	ENDWHILE
+ENDFUNC
 
 FUNC main()
-	CALL init_heap()
-	CALL malloc(128)
+	CALL test_pow()
 ENDFUNC

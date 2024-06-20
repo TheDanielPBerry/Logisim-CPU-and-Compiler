@@ -9,7 +9,7 @@ FUNC init_heap()
 	SET HEAP_POINTER[MEM_BLOCK_START] = HEAP_POINTER
 	SET HEAP_POINTER[MEM_BLOCK_LENGTH] = 4096
 	SET (char)HEAP_POINTER[MEM_BLOCK_IN_USE] = (char)1
-	SET end_of_heap = end_of_heap + MEM_BLOCK_SIZE
+	SET end_of_heap = end_of_heap
 ENDFUNC
 
 FUNC malloc(size: word): *word
@@ -29,7 +29,11 @@ FUNC malloc(size: word): *word
 	SET heap_entry = end_of_heap + MEM_BLOCK_SIZE
 	SET heap_entry[MEM_BLOCK_START] = end_of_heap[MEM_BLOCK_START] + end_of_heap[MEM_BLOCK_LENGTH]
 	SET heap_entry[MEM_BLOCK_LENGTH] = size
-	SET HEAP_POINTER[MEM_BLOCK_IN_USE] = (char)1
+	SET heap_entry[MEM_BLOCK_IN_USE] = (char)1
 	SET end_of_heap = heap_entry
 	RETURN end_of_heap[MEM_BLOCK_START]
+ENDFUNC
+
+FUNC free()
+	
 ENDFUNC

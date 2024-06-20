@@ -7,6 +7,63 @@ FUNC str_len(str: *char): word
 	RETURN index
 ENDFUNC
 
+FUNC str_pos(needle: *char, haystack: *char): word
+	//DEFINE haystackIndex: word = 0
+	//DEFINE needleIndex: word = 0
+	//
+	//ENTRY :increment_needle_str_pos
+	//	SET needleIndex = needleIndex + 1
+	//	MOV needleIndex > B
+	//	MOV needle > IDX
+	//	MOV MAR > A (B630)
+//
+	//	MOV haystackIndex > D
+//
+	//ENTRY :increment_haystack_str_pos
+	//	MOV haystack > IDX
+	//	MOV MAR > B (B830)
+	//	ALU D|1 > D
+	//	ALU A|B > NUL
+	//	JE :increment_needle_str_pos
+	//	SET needleIndex = 1
+	//	GOTO :increment_haystack_str_pos
+	//WHILE (char)needle[needleIndex] != (char)0
+	//	IF (char)haystack[haystackIndex] == 0
+	//		RETURN -1
+	//	ENDIF
+	//	SET needleIndex = 0
+	//	WHILE (char)haystack[haystackIndex] == (char)needle[needleIndex]
+	//		SET needleIndex = needleIndex+1
+	//	ENDWHILE
+	//	SET haystackIndex = haystackIndex+1
+	//ENDWHILE
+	//SET haystackIndex = haystackIndex - needleIndex
+	//RETURN haystackIndex
+
+	DEFINE haystackTracker: word = 0
+	DEFINE haystackIndex: word = 0
+	DEFINE needleIndex: word = 0
+
+	WHILE (char)haystack[haystackIndex] != (char)0
+		SET needleIndex = 0
+		SET haystackTracker = haystackIndex
+
+		WHILE (char)haystack[haystackTracker] == (char)needle[needleIndex]
+			IF (char)needle[needleIndex] == 0
+				RETURN haystackIndex
+			ENDIF
+			SET needleIndex = needleIndex + 1
+			SET haystackTracker = haystackTracker + 1
+		ENDWHILE
+
+		IF (char)needle[needleIndex] == 0
+			RETURN haystackIndex
+		ENDIF
+
+		SET haystackIndex = haystackIndex+1
+	ENDWHILE
+	RETURN -1
+ENDFUNC
 
 //String compare
 FUNC str_cmp(left: *char, right: *char): char

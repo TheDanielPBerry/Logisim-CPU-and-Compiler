@@ -1,0 +1,68 @@
+
+FUNC factorial(num: word): word
+	DEFINE fact: word = 1
+	WHILE num > 1
+		SET fact = fact * num
+		SET num = num -1
+	ENDWHILE
+	RETURN fact
+ENDFUNC
+
+FUNC pow(num: word, power: word): word
+	DEFINE result: word = 1
+	WHILE power > 0
+		SET result = result * num
+		SET power = power - 1
+	ENDWHILE
+	RETURN result
+ENDFUNC
+
+
+
+
+///////Testing
+FUNC test_factorial()
+	DEFINE num1: *word = 0
+	
+	WHILE TRUE
+		SET *putchar = (char)'1'
+		CALL print(&prompt)
+		CALL scan_num()
+		SET num1 = !returnVal
+
+		CALL factorial(num1)
+		DEFINE result: word = !returnVal
+
+		SET *putchar = (char)10
+		CALL print_word(result)
+		SET *putchar = (char)10
+		SET *putchar = (char)10
+	ENDWHILE
+ENDFUNC
+
+
+FUNC test_pow()
+	DEFINE num1: *word = 0
+	DEFINE num2: *word = 0
+
+	WHILE TRUE
+		SET *putchar = (char)'1'
+		CALL print(&prompt)
+		CALL scan_num()
+		SET num1 = !returnVal
+
+		SET *putchar = (char)10
+		SET *putchar = (char)'2'
+		CALL print(&prompt)
+		CALL scan_num()
+		SET num2 = !returnVal
+
+		CALL pow(num1, num2)
+		DEFINE result: word = !returnVal
+
+		SET *putchar = (char)10
+		CALL print_word(result)
+		SET *putchar = (char)10
+		SET *putchar = (char)10
+	ENDWHILE
+ENDFUNC
