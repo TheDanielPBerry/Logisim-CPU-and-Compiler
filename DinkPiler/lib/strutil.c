@@ -1,7 +1,6 @@
 #include "vector.h"
-#include "stdlib.h"
-#include "string.h"
-#include <regex.h>
+#include <stdlib.h>
+#include <string.h>
 
 char* substr(char* str, int start, int offset) {
 	if(start < 0) {

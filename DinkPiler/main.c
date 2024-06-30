@@ -21,14 +21,6 @@ typedef struct DataType {
 	unsigned char size;
 } DataType;
 
-enum KeywordType {
-	CONTROL,
-	DATATYPE
-};
-struct Keyword {
-	char name[20];
-	enum KeywordType type;
-};
 
 typedef enum AddressType {
 	GLOBAL,
@@ -37,36 +29,70 @@ typedef enum AddressType {
 
 typedef struct MemoryPoint {
 	char* name;
-	int val;
+	int value;
 	DataType* dataType;
 	AddressType addressType;
-	HashMap* scope;
+	HashMap* scope; //This scope field will be null for everything except functions
 } MemoryPoint;
 
 
+enum StructType {
+	Generic_t,
+	MemoryPoint_t,
+	DataType_t
+};
+
 HashMap* types;
-HashMap* keywords;
-HashMap* vars;
 vec* scope;
 
 vec* output;
 
 
+
+
+MemoryPoint* search_for_label(char* label) {
+	HashMap* currentScope = vec_end(scope);
+	while(currentScope != NULL) {
+		if(hashmap_key_exists(currentScope, label)) {
+			return hashmap_get(currentScope, label);
+		}
+		currentScope = vec_prev(scope);
+	}
+	return NULL;
+}
+
 /**
- * 
-*/
+ * Break down each statement from the source code and determine it's purpose
+ */
 void ParseStatement(char* statement) {
 	int separatorCharacter = findNextStmtSeparator(statement, 0);
 	char* stmtIdentifier;
 	stmtIdentifier = substr(statement, 0, separatorCharacter);
 	trim(stmtIdentifier);
 	printf("%s\t", stmtIdentifier);
+	
+	HashMap* currentScope = vec_end(scope);
 
-
-	//Check if identifier is a reserved keyword
-	if(hashmap_key_exists(keywords, stmtIdentifier)) {
-		
+	if(statement[0] == '}') {
+		//Close a block
+		currentScope = vec_pop(scope);
+		if(hashmap_key_exists(currentScope, "!returnAddr")) {
+			printf("Exiting FUNC %s", ((MemoryPoint*) hashmap_get(currentScope, "!returnAddr"))->name);
+		} else {
+			printf("Exiting Block - %d", scope->length);
+		}			
+		destroy_hashmap(currentScope);
 	}
+	
+	if(strcmp("if", stmtIdentifier) == 0) {
+		HashMap* ifScope = new_hashmap();
+		vec_push(scope, ifScope);
+	} else if(strcmp("while", stmtIdentifier) == 0) {
+		HashMap* whileScope = new_hashmap();
+		vec_push(scope, whileScope);
+	}
+
+
 	if(hashmap_key_exists(types, stmtIdentifier)) {
 		int statementDeterminer =  findNextCharFromSet(statement, "(=;", separatorCharacter);
 		
@@ -76,22 +102,39 @@ void ParseStatement(char* statement) {
 			char* funcName = substr(statement, separatorCharacter, statementDeterminer-separatorCharacter);
 			trim(funcName);
 			printf("New FUNC %s", funcName);
-			MemoryPoint* func = malloc(sizeof(MemoryPoint));
-			*func = (MemoryPoint) {
+
+
+
+			HashMap* functionScope = new_hashmap();
+			MemoryPoint* returnAddr = malloc(sizeof(MemoryPoint));
+			*returnAddr = (MemoryPoint) {
 				.name = malloc(strlen(funcName) + 1),
 				.dataType = hashmap_get(types, "entrypoint"),
-				.addressType = (scope->length > 1) ? LOCAL : GLOBAL
+				.addressType = LOCAL,
+				.value = 0
+			};
+			hashmap_put(functionScope, "!returnAddr", returnAddr);
+
+			MemoryPoint* func = malloc(sizeof(MemoryPoint));
+			*func = (MemoryPoint) {
+				.name = returnAddr->name,
+				.dataType = hashmap_get(types, "entrypoint"),
+				.addressType = (scope->length > 1) ? LOCAL : GLOBAL,
+				.value = 0,
+				.scope = functionScope
 			};
 			strcpy(func->name, funcName);
 			
-			hashmap_put(vars, funcName, func);
+			hashmap_put(currentScope, funcName, func);
+			
+			vec_push(scope, functionScope);
 			free(funcName);
 		}
 		else if(statement[statementDeterminer] == '=' || statement[statementDeterminer] == ';') {
 			DataType* dataType = hashmap_get(types, stmtIdentifier);
 			char* varName = substr(statement, separatorCharacter, statementDeterminer - separatorCharacter);
 			trim(varName);
-			printf("New Var %s", varName);
+			printf("New %s Var %s", scope->length > 1 ? "LOCAL" : "GLOBAL", varName);
 			MemoryPoint* var = malloc(sizeof(MemoryPoint));
 			*var = (MemoryPoint) {
 				.name = malloc(strlen(varName) + 1),
@@ -99,27 +142,22 @@ void ParseStatement(char* statement) {
 				.addressType = scope->length > 1 ? LOCAL : GLOBAL
 			};
 			strcpy(var->name, varName);
-			hashmap_put(vars, varName, var);
+			hashmap_put(currentScope, varName, var);
 			
 			free(varName);
 		}
 	}
 
-	
-	if(hashmap_key_exists(vars, stmtIdentifier)) {
-		//Using a a variable
+	MemoryPoint* label = search_for_label(stmtIdentifier);	
+	if(label != NULL) {
+		//Accessing a memory point
 		int statementDeterminer =  findNextCharFromSet(statement, "(=;", 0);
 		if(statement[statementDeterminer] == '(') {
 			//Function Call
-			char* funcName = substr(statement, 0, statementDeterminer);
-			trim(funcName);
-			printf("Call FUNC %s", ((MemoryPoint*) hashmap_get(vars, funcName))->name);
-			free(funcName);
+			printf("Call FUNC %s", label->name);
 		} else if(statement[statementDeterminer] == '=') {
-			char* varName = substr(statement, 0, statementDeterminer);
-			trim(varName);
-			printf("Assignment into %s", ((MemoryPoint*) hashmap_get(vars, varName))->name);
-			free(varName);
+			//Variable Assignment
+			printf("Assignment into %s", label->name);
 		}
 	}
 	printf("\n");
@@ -186,55 +224,18 @@ HashMap* InitializeTypes() {
 }
 
 
-/**
- * 
-*/
-struct HashMap* InitializeKeywords() {
-	struct HashMap* keywordSet = new_hashmap();
-	
-	struct Keyword* keyword = malloc(sizeof(struct Keyword));
-	*keyword = (struct Keyword) {
-		.name = "for",
-		.type = CONTROL
-	};
-	hashmap_put(keywordSet, "for", keyword);
-
-	keyword = malloc(sizeof(struct Keyword));
-	*keyword = (struct Keyword) {
-		.name = "if",
-		.type = CONTROL
-	};
-	hashmap_put(keywordSet, "if", keyword);
-
-	keyword = malloc(sizeof(struct Keyword));
-	*keyword = (struct Keyword) {
-		.name = "while",
-		.type = CONTROL
-	};
-	hashmap_put(keywordSet, "while", keyword);
-
-	return keywordSet;
-}
 
 
-void* destroy_hashmap_vars() {
-	MemoryPoint* mp = (MemoryPoint*) hashmap_reset(vars);
-	while(mp != NULL) {
-		free(mp->name);
-		mp = (MemoryPoint*) hashmap_next(vars);
-	}
-	return destroy_hashmap(vars);
-}
+
 
 int main() {
 	test_all();
 	
 	types = InitializeTypes();
-	keywords = InitializeKeywords();
-	vars = new_hashmap();
+	HashMap* globalScope = new_hashmap();
 	scope = new_vec();
 	output = new_vec();
-	vec_push(scope, vars);
+	vec_push(scope, globalScope);
 	
 	FILE *fptr;
 	fptr = fopen("src.dink", "r");
@@ -255,7 +256,7 @@ int main() {
 	int lastStatement = 0;
 	while(stmtTerminator > 0) {
 		char* statement = substr(sourceCode, lastStatement, stmtTerminator-lastStatement);
-		
+		trim(statement);
 		int nextSpace = findNextChar(statement, ' ');
 		int nextEqualSign = findNextChar(statement, '=');
 		int separatorCharacter = findNextStmtSeparator(statement, 0);
@@ -277,8 +278,6 @@ int main() {
 	statements = destroy_vec(statements);
 	output = destroy_vec(output);
 
-	vars = destroy_hashmap_vars();
-	keywords = destroy_hashmap(keywords);
 	types = destroy_hashmap(types);
 	free(scope);
 	scope = NULL;

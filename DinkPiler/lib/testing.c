@@ -81,6 +81,16 @@ void test_hashmap() {
 }
 
 
+struct Person {
+	char name[30];
+	int age;
+};
+
+enum Types {
+	String_t,
+	Person_t	
+};
+
 void test_vec() {
 	char* redStringOriginal = "#FF0000";
 	char* redString = malloc(strlen(redStringOriginal));
@@ -117,9 +127,20 @@ void test_vec() {
 	assert(strcmp(redStringOriginal, vec_pop(vector)) == 0);
 	assert(vec_pop(vector) == NULL);
 
+	vector = destroy_vec(vector);
+	assert(vector == NULL);
+	
+	////Test Strictly-Typed Vectors
+	vector = new_vec_t(Person_t);
+	
+
 	free(redString);
 	free(blueString);
+	redString = NULL;
+	blueString = NULL;
 	vector = destroy_vec(vector);
+
+
 
 	printf(GREEN "✓ Testing Vector - Passed\n" RESET);
 
