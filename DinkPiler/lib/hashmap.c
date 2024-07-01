@@ -6,19 +6,21 @@
 
 #define DEFAULT_HASH_TABLE_SIZE 2048
 
-struct HashEntry {
+typedef struct HashEntry {
 	unsigned long long hash;
 	void* element;
+	unsigned int type;
 	struct HashEntry* next;
 	struct HashEntry* prev;
-};
+} HashEntry;
 
 typedef struct HashMap {
 	unsigned int length;
-	struct HashEntry* iterator;
-	struct HashEntry pool[DEFAULT_HASH_TABLE_SIZE];
-	struct HashEntry* first;
-	struct HashEntry* last;
+	unsigned int genericType;
+	HashEntry* iterator;
+	HashEntry pool[DEFAULT_HASH_TABLE_SIZE];
+	HashEntry* first;
+	HashEntry* last;
 } HashMap;
 
 
@@ -34,17 +36,24 @@ unsigned long long get_hash(char* array) {
 	return accumulator;
 }
 
-
-HashMap* new_hashmap() {
+HashMap* new_hashmap_t(unsigned int genericType) {
 	HashMap* new_map = calloc(1, sizeof(HashMap));
-	new_map->first = NULL;
-	new_map->last = NULL;
+	new_map->genericType = genericType;
 	return new_map;
 }
 
-unsigned int hashmap_put(HashMap* self, char* key, void* element) {
-	unsigned long long hash = get_hash(key);
-	unsigned int offset = hash % DEFAULT_HASH_TABLE_SIZE;
+HashMap* new_hashmap() {
+	return new_hashmap_t(0);
+}
+
+unsigned int hashmap_put_t(HashMap* self, char* key, void* element, unsigned int type) {
+	if(self->genericType > 0 && self->genericType != type) {
+		//If the types are strict and don't match, don't append
+		return self->length;
+	}
+
+	long long hash = get_hash(key);
+	int offset = hash % DEFAULT_HASH_TABLE_SIZE;
 
 	while(self->pool[offset].hash != 0) {
 		if(self->pool[offset].hash == hash) {
@@ -56,7 +65,7 @@ unsigned int hashmap_put(HashMap* self, char* key, void* element) {
 	}
 
 	//Append a new entry into hashmap
-	struct HashEntry* last_entry = self->last;
+	HashEntry* last_entry = self->last;
 
 	self->last = &self->pool[offset];
 	if(last_entry == NULL) {
@@ -74,7 +83,12 @@ unsigned int hashmap_put(HashMap* self, char* key, void* element) {
 	return ++self->length;
 }
 
-void* hashmap_get(HashMap* self, char* key) {
+unsigned int hashmap_put(HashMap* self, char* key, void* element) {
+	return hashmap_put_t(self, key, element, self->genericType);
+}
+
+
+HashEntry* hashmap_get_t(HashMap* self, char* key) {
 	unsigned long long hash = get_hash(key);
 	int offset = hash % DEFAULT_HASH_TABLE_SIZE;
 	while(self->pool[offset].hash != hash) {
@@ -83,8 +97,17 @@ void* hashmap_get(HashMap* self, char* key) {
 		}
 		offset++;
 	}
-	return self->pool[offset].element;
+	return &self->pool[offset];
 }
+
+void* hashmap_get(HashMap* self, char* key) {
+	HashEntry* search = hashmap_get_t(self, key);
+	if(search != NULL) {
+		return search->element;
+	}
+	return NULL;
+}
+
 
 bool hashmap_key_exists(HashMap* self, char* key) {
 	unsigned long long hash = get_hash(key);
@@ -176,7 +199,7 @@ void* hashmap_reset(HashMap* self) {
  * Iterate through every element and free the memory of that element
  */
 HashMap* destroy_hashmap(HashMap* self) {
-	struct HashEntry* iterator = self->first;
+	HashEntry* iterator = self->first;
 	while(iterator != NULL) {
 		free(iterator->element);
 		iterator = iterator->next;

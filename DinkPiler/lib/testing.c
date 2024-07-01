@@ -76,6 +76,8 @@ void test_hashmap() {
 	
 	map = destroy_hashmap(map);
 	assert(map == NULL);
+	
+	
 
 	printf(GREEN "✓ Testing HashMap - Passed\n" RESET);
 }

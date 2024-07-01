@@ -13,7 +13,6 @@
 #include "lib/testing.h"
 
 
-char* sourceCode;
 
 
 typedef struct DataType {
@@ -39,12 +38,14 @@ typedef struct MemoryPoint {
 enum StructType {
 	Generic_t,
 	MemoryPoint_t,
-	DataType_t
+	DataType_t,
+	IF_t,
+	WHILE_t
 };
 
+//Global Vars
 HashMap* types;
 vec* scope;
-
 vec* output;
 
 
@@ -75,21 +76,23 @@ void ParseStatement(char* statement) {
 
 	if(statement[0] == '}') {
 		//Close a block
-		currentScope = vec_pop(scope);
+		vec_item* currentScopeEntry = vec_pop_t(scope);
 		if(hashmap_key_exists(currentScope, "!returnAddr")) {
 			printf("Exiting FUNC %s", ((MemoryPoint*) hashmap_get(currentScope, "!returnAddr"))->name);
-		} else {
-			printf("Exiting Block - %d", scope->length);
-		}			
+		} else if(currentScopeEntry->type == IF_t) {
+			printf("Exiting If Block - %d", scope->length);
+		} else if(currentScopeEntry->type == WHILE_t) {
+			printf("Exiting While Block - %d", scope->length);
+		}
 		destroy_hashmap(currentScope);
 	}
 	
 	if(strcmp("if", stmtIdentifier) == 0) {
 		HashMap* ifScope = new_hashmap();
-		vec_push(scope, ifScope);
+		vec_push_t(scope, ifScope, IF_t);
 	} else if(strcmp("while", stmtIdentifier) == 0) {
 		HashMap* whileScope = new_hashmap();
-		vec_push(scope, whileScope);
+		vec_push_t(scope, whileScope, WHILE_t);
 	}
 
 
@@ -103,32 +106,28 @@ void ParseStatement(char* statement) {
 			trim(funcName);
 			printf("New FUNC %s", funcName);
 
+			MemoryPoint* func = malloc(sizeof(MemoryPoint));
+			*func = (MemoryPoint) {
+				.name = funcName,
+				.dataType = hashmap_get(types, "entrypoint"),
+				.addressType = (scope->length > 1) ? LOCAL : GLOBAL,
+				.value = 0,
+				.scope = new_hashmap() //External Scope
+			};
 
-
-			HashMap* functionScope = new_hashmap();
+			hashmap_put(currentScope, func->name, func);
+			
+			HashMap* internalScope = new_hashmap();
 			MemoryPoint* returnAddr = malloc(sizeof(MemoryPoint));
 			*returnAddr = (MemoryPoint) {
-				.name = malloc(strlen(funcName) + 1),
+				.name = funcName,
 				.dataType = hashmap_get(types, "entrypoint"),
 				.addressType = LOCAL,
 				.value = 0
 			};
-			hashmap_put(functionScope, "!returnAddr", returnAddr);
+			hashmap_put(internalScope, "!returnAddr", returnAddr);
+			vec_push(scope, internalScope);
 
-			MemoryPoint* func = malloc(sizeof(MemoryPoint));
-			*func = (MemoryPoint) {
-				.name = returnAddr->name,
-				.dataType = hashmap_get(types, "entrypoint"),
-				.addressType = (scope->length > 1) ? LOCAL : GLOBAL,
-				.value = 0,
-				.scope = functionScope
-			};
-			strcpy(func->name, funcName);
-			
-			hashmap_put(currentScope, funcName, func);
-			
-			vec_push(scope, functionScope);
-			free(funcName);
 		}
 		else if(statement[statementDeterminer] == '=' || statement[statementDeterminer] == ';') {
 			DataType* dataType = hashmap_get(types, stmtIdentifier);
@@ -137,14 +136,11 @@ void ParseStatement(char* statement) {
 			printf("New %s Var %s", scope->length > 1 ? "LOCAL" : "GLOBAL", varName);
 			MemoryPoint* var = malloc(sizeof(MemoryPoint));
 			*var = (MemoryPoint) {
-				.name = malloc(strlen(varName) + 1),
+				.name = varName,
 				.dataType = dataType,
 				.addressType = scope->length > 1 ? LOCAL : GLOBAL
 			};
-			strcpy(var->name, varName);
 			hashmap_put(currentScope, varName, var);
-			
-			free(varName);
 		}
 	}
 
@@ -223,8 +219,33 @@ HashMap* InitializeTypes() {
 	return typeSet;
 }
 
+void cleanup_scope(HashMap* currScope) {
+	MemoryPoint* point = hashmap_reset(currScope);
+	while(point != NULL) {
+		if(point->name != NULL) {
+			free(point->name);
+			point->name = NULL;
+		}
+		if(point->scope != NULL) {
+			cleanup_scope(point->scope);
+			point->scope = NULL;
+		}
+		point = hashmap_next(currScope);
+	}
+	destroy_hashmap(currScope);
+}
 
+void cleanup() {
+	HashMap* currScope = vec_pop(scope);
+	while(currScope != NULL) {
+		cleanup_scope(currScope);
+		currScope = vec_pop(scope);
+	}
 
+	scope = destroy_vec(scope);
+	output = destroy_vec(output);
+	types = destroy_hashmap(types);
+}
 
 
 
@@ -244,7 +265,7 @@ int main() {
 	long length = ftell(fptr);
 
 	fseek(fptr, 0, SEEK_SET);
-	sourceCode = malloc(length);
+	char* sourceCode = malloc(length);
 	if(sourceCode) {
 		fread(sourceCode, 1, length, fptr);
 	}
@@ -274,12 +295,8 @@ int main() {
 	//Clean up memory on exit
 	free(sourceCode);
 	sourceCode = NULL;
-
 	statements = destroy_vec(statements);
-	output = destroy_vec(output);
 
-	types = destroy_hashmap(types);
-	free(scope);
-	scope = NULL;
+	cleanup();
 }
 
