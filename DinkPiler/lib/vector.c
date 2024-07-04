@@ -175,15 +175,18 @@ void* vec_remove(vec* self, unsigned int index) {
 }
 
 
+vec_item* vec_next_t(vec* self) {
+	self->iterator = self->iterator->next;
+	return self->iterator;
+}
+
 /**
  * Move through the linked list in order and return the element until null
  */
 void* vec_next(vec* self) {
-	if(self->iterator != NULL) {
-		self->iterator = self->iterator->next;
-		if(self->iterator != NULL) {
-			return self->iterator->element;
-		}
+	vec_item* iterator = vec_next_t(self);
+	if(iterator != NULL) {
+		return iterator->element;
 	}
 	return NULL;
 }
@@ -201,13 +204,17 @@ void* vec_prev(vec* self) {
 	return NULL;
 }
 
+vec_item* vec_reset_t(vec* self) {
+	self->iterator = self->first;
+	return self->iterator;
+}
 /**
  *  Reset internal iterator to first element in the list
  *  @return 
  */
 void* vec_reset(vec* self) {
-	self->iterator = self->first;
-	if(self->iterator == NULL) {
+	vec_item* iterator = vec_reset_t(self);
+	if(iterator == NULL) {
 		return NULL;
 	}
 	return self->iterator->element;

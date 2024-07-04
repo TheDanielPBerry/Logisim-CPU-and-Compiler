@@ -4,10 +4,10 @@
 
 char* substr(char* str, int start, int offset) {
 	if(start < 0) {
-		start = (sizeof(str)/sizeof(str[0])) - (start*sizeof(str[0]));
+		start = strlen(str) - start;
 	}
 	if(offset < 0) {
-		offset = (sizeof(str)/sizeof(str[0])) - (offset*sizeof(str[0]));
+		offset = strlen(str) + offset;
 		if(start > offset) {
 			return NULL;
 		}
@@ -122,4 +122,5 @@ int findNextCharFromSet(char* haystack, char* needles, int startingPoint) {
 	}
 	return -1;
 }
+
 

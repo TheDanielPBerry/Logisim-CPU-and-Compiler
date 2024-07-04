@@ -27,9 +27,16 @@ void* vec_get(vec* self, unsigned int index);
 
 void* vec_remove(vec* self, unsigned int index);
 
+vec_item* vec_next_t(vec* self);
 void* vec_next(vec* self);
+
+
 void* vec_prev(vec* self);
+
+vec_item* vec_reset_t(vec* self);
 void* vec_reset(vec* self);
+
+
 void* vec_end(vec* self);
 
 

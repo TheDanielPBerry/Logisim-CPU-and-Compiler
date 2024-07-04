@@ -39,18 +39,22 @@ enum StructType {
 	Generic_t,
 	MemoryPoint_t,
 	DataType_t,
+	FUNC_t,
 	IF_t,
-	WHILE_t
+	WHILE_t,
+	STRING_t
 };
 
 //Global Vars
 HashMap* types;
 vec* scope;
-vec* output;
+vec* outputData;
 
 
 
-
+/**
+ * Recursively search for a label up the scope list
+ */
 MemoryPoint* search_for_label(char* label) {
 	HashMap* currentScope = vec_end(scope);
 	while(currentScope != NULL) {
@@ -63,36 +67,72 @@ MemoryPoint* search_for_label(char* label) {
 }
 
 /**
+ * Define the bytes with a label in the assembly
+ */
+void InitializeGlobal(struct DataType* type, char* name, char* data, unsigned int length) {
+	char* instruction = calloc(1, 512);
+	strcat(instruction, name);
+	strcat(instruction, ": db ");
+	strcat(instruction, data);
+	vec_push_t(outputData, instruction, STRING_t);
+}
+
+void ParseExpression(char* expr) {
+	int separatorCharacter = findNextStmtSeparator(expr, 0);
+	char* stmtIdentifier;
+	stmtIdentifier = substr(expr, 0, separatorCharacter);
+	trim(stmtIdentifier);
+	
+	MemoryPoint* label = search_for_label(stmtIdentifier);	
+	if(label != NULL) {
+		//Accessing a memory point
+		int exprDeterminer =  findNextCharFromSet(expr, "(=;", 0);
+		if(expr[exprDeterminer] == '(') {
+			//Function Call
+			printf("Call FUNC %s\n", label->name);
+		} else if(expr[exprDeterminer] == '=') {
+			//Variable Assignment
+			printf("Assignment into %s\n", label->name);
+		}
+	}
+}
+
+/**
  * Break down each statement from the source code and determine it's purpose
  */
 void ParseStatement(char* statement) {
-	int separatorCharacter = findNextStmtSeparator(statement, 0);
-	char* stmtIdentifier;
-	stmtIdentifier = substr(statement, 0, separatorCharacter);
-	trim(stmtIdentifier);
-	printf("%s\t", stmtIdentifier);
-	
 	HashMap* currentScope = vec_end(scope);
 
 	if(statement[0] == '}') {
 		//Close a block
 		vec_item* currentScopeEntry = vec_pop_t(scope);
 		if(hashmap_key_exists(currentScope, "!returnAddr")) {
-			printf("Exiting FUNC %s", ((MemoryPoint*) hashmap_get(currentScope, "!returnAddr"))->name);
+			printf("Exiting FUNC %s\n", ((MemoryPoint*) hashmap_get(currentScope, "!returnAddr"))->name);
 		} else if(currentScopeEntry->type == IF_t) {
-			printf("Exiting If Block - %d", scope->length);
+			printf("Exiting If Block - %d\n", scope->length);
 		} else if(currentScopeEntry->type == WHILE_t) {
-			printf("Exiting While Block - %d", scope->length);
+			printf("Exiting While Block - %d\n", scope->length);
 		}
 		destroy_hashmap(currentScope);
+		return;
 	}
+
+	int separatorCharacter = findNextStmtSeparator(statement, 0);
+	char* stmtIdentifier;
+	stmtIdentifier = substr(statement, 0, separatorCharacter);
+	trim(stmtIdentifier);
+	printf("%s\t", stmtIdentifier);
+	
+
 	
 	if(strcmp("if", stmtIdentifier) == 0) {
 		HashMap* ifScope = new_hashmap();
 		vec_push_t(scope, ifScope, IF_t);
+		printf("Opening if block\n");
 	} else if(strcmp("while", stmtIdentifier) == 0) {
 		HashMap* whileScope = new_hashmap();
 		vec_push_t(scope, whileScope, WHILE_t);
+		printf("Opening While Block\n");
 	}
 
 
@@ -104,7 +144,7 @@ void ParseStatement(char* statement) {
 			//Type is a functions
 			char* funcName = substr(statement, separatorCharacter, statementDeterminer-separatorCharacter);
 			trim(funcName);
-			printf("New FUNC %s", funcName);
+			printf("New FUNC %s\n", funcName);
 
 			MemoryPoint* func = malloc(sizeof(MemoryPoint));
 			*func = (MemoryPoint) {
@@ -126,14 +166,14 @@ void ParseStatement(char* statement) {
 				.value = 0
 			};
 			hashmap_put(internalScope, "!returnAddr", returnAddr);
-			vec_push(scope, internalScope);
+			vec_push_t(scope, internalScope, FUNC_t);
 
 		}
 		else if(statement[statementDeterminer] == '=' || statement[statementDeterminer] == ';') {
 			DataType* dataType = hashmap_get(types, stmtIdentifier);
 			char* varName = substr(statement, separatorCharacter, statementDeterminer - separatorCharacter);
 			trim(varName);
-			printf("New %s Var %s", scope->length > 1 ? "LOCAL" : "GLOBAL", varName);
+			printf("New %s Var %s\n", scope->length > 1 ? "LOCAL" : "GLOBAL", varName);
 			MemoryPoint* var = malloc(sizeof(MemoryPoint));
 			*var = (MemoryPoint) {
 				.name = varName,
@@ -141,23 +181,23 @@ void ParseStatement(char* statement) {
 				.addressType = scope->length > 1 ? LOCAL : GLOBAL
 			};
 			hashmap_put(currentScope, varName, var);
-		}
-	}
+			
+			if(scope->length == 1) {
+				//Initialize global variable
+				if(statement[statementDeterminer] == '=') {
+					char* assignmentExpr = substr(statement, statementDeterminer+1, -1);
+					trim(assignmentExpr);
+					InitializeGlobal(dataType, varName, assignmentExpr, 0);
+					free(assignmentExpr);
+				}
+			}
 
-	MemoryPoint* label = search_for_label(stmtIdentifier);	
-	if(label != NULL) {
-		//Accessing a memory point
-		int statementDeterminer =  findNextCharFromSet(statement, "(=;", 0);
-		if(statement[statementDeterminer] == '(') {
-			//Function Call
-			printf("Call FUNC %s", label->name);
-		} else if(statement[statementDeterminer] == '=') {
-			//Variable Assignment
-			printf("Assignment into %s", label->name);
 		}
+		return;
 	}
-	printf("\n");
 	free(stmtIdentifier);
+
+	ParseExpression(statement);
 }
 
 
@@ -197,17 +237,17 @@ HashMap* InitializeTypes() {
 	
 	dataType = malloc(sizeof(struct DataType));
 	*dataType = (struct DataType) {
-		.name = "word",
+		.name = "short",
 		.size = 2
 	};
-	hashmap_put(typeSet, "word", dataType);
+	hashmap_put(typeSet, "short", dataType);
 	
 	dataType = malloc(sizeof(struct DataType));
 	*dataType = (struct DataType) {
-		.name = "word*",
+		.name = "short*",
 		.size = 2
 	};
-	hashmap_put(typeSet, "word*", dataType);
+	hashmap_put(typeSet, "short*", dataType);
 
 	dataType = malloc(sizeof(struct DataType));
 	*dataType = (struct DataType) {
@@ -243,11 +283,23 @@ void cleanup() {
 	}
 
 	scope = destroy_vec(scope);
-	output = destroy_vec(output);
+	outputData = destroy_vec(outputData);
 	types = destroy_hashmap(types);
 }
 
 
+
+void outputAsm() {
+	printf("\n/////////////////////////////////\n");
+	printf("SECTION .data\n");
+	vec_item* iterator = vec_reset_t(outputData);
+	while(iterator != NULL) {
+		if(iterator->type == STRING_t) {
+			printf("%s\n", (char*) iterator->element);
+		}
+		iterator = vec_next_t(outputData);
+	}
+}
 
 int main() {
 	test_all();
@@ -255,7 +307,7 @@ int main() {
 	types = InitializeTypes();
 	HashMap* globalScope = new_hashmap();
 	scope = new_vec();
-	output = new_vec();
+	outputData = new_vec();
 	vec_push(scope, globalScope);
 	
 	FILE *fptr;
@@ -291,6 +343,7 @@ int main() {
 		free(statement);
 	}
 
+	outputAsm();
 
 	//Clean up memory on exit
 	free(sourceCode);
