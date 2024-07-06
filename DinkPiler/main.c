@@ -23,7 +23,9 @@ typedef struct DataType {
 
 typedef enum AddressType {
 	GLOBAL,
-	LOCAL
+	LOCAL,
+	GLOBAL_INDEX,
+	LOCAL_INDEX
 } AddressType;
 
 typedef struct MemoryPoint {
@@ -51,6 +53,21 @@ vec* scope;
 vec* outputData;
 
 
+char* ParseLiteral(char* literal) {
+	trim(literal);
+	unsigned int strLen = strlen(literal);
+	//Check is string
+	if(literal[0] == '"' && literal[strLen-1] == '"') {
+		return literal;
+	}
+	if(literal[0] == '\'' && literal[strLen-1] == '\'') {
+		char* ret = malloc(2);
+		ret[0] = literal[1];
+		ret[1] = '\0';
+		return ret;
+	}
+	return literal;
+}
 
 /**
  * Recursively search for a label up the scope list
@@ -67,34 +84,90 @@ MemoryPoint* search_for_label(char* label) {
 }
 
 /**
+ * Recursive way to handle complex code expressions
+ */
+char* ParseExpression(char* expr) {
+	int separatorCharacter = findNextCharFromSet(expr, "(=;+-/*$%!", 0);
+	char* stmtIdentifier;
+	if(separatorCharacter >= 0) {
+		stmtIdentifier = substr(expr, 0, separatorCharacter);
+		trim(stmtIdentifier);
+	} else {
+		stmtIdentifier = expr;
+	}
+
+
+	int referenceType = 0; //Immediate
+	//Address Modification
+	if(expr[0] == '&') {
+		referenceType = 1; //Reference address of expression
+		memmove(expr, (expr+1), strlen(expr)); //Remove the first character
+	} else if(expr[1] == '*') {
+		referenceType = -1; //Dereference expression
+		memmove(expr, (expr+1), strlen(expr)); //Remove the first character
+	}
+	
+	MemoryPoint* label = search_for_label(stmtIdentifier);	
+	if(label != NULL) {
+		//Accessing a memory point
+		int exprDeterminerPos =  findNextCharFromSet(expr, "(=;+-*/", 0);
+		char exprDeterminer = expr[exprDeterminerPos];
+
+		if(exprDeterminer == '(') {
+			//Function Call
+			printf("Call FUNC %s\n", label->name);
+		} else if(exprDeterminer == '=') {
+			//Variable Assignment
+			printf("Assignment into %s\n", label->name);
+		} else if(exprDeterminer == '+' 
+			|| exprDeterminerPos == '-' 
+			|| exprDeterminerPos == '*' 
+			|| exprDeterminerPos == '/' 
+			|| exprDeterminerPos == '%' 
+			|| exprDeterminerPos == '&'  
+			|| exprDeterminerPos == '|'
+			|| exprDeterminerPos == '^') {
+			//Alu Operation
+			
+		} else if(label) {
+			return expr;
+		}
+	}
+
+	if(separatorCharacter >= 0) {
+		free(stmtIdentifier);
+	}
+	return ParseLiteral(expr);
+}
+
+/**
  * Define the bytes with a label in the assembly
  */
 void InitializeGlobal(struct DataType* type, char* name, char* data, unsigned int length) {
 	char* instruction = calloc(1, 512);
 	strcat(instruction, name);
-	strcat(instruction, ": db ");
+	strcat(instruction, ": ");
+	if(type->size == 1) {
+		strcat(instruction, "db ");
+	} else if(type->size == 2) {
+		strcat(instruction, "dw ");
+	} else if(type->size == 4) {
+		strcat(instruction, "dd ");
+	}
+
+	int referenceType = 0; //Immediate
+	//Address Modification
+	if(data[0] == '&') {
+		referenceType = 1; //Reference address of expression
+		memmove(data, (data+1), strlen(data)); //Remove the first character
+	} else if(data[1] == '*') {
+		referenceType = -1; //Dereference expression
+		memmove(data, (data+1), strlen(data)); //Remove the first character
+	}
+
+	data = ParseExpression(data);
 	strcat(instruction, data);
 	vec_push_t(outputData, instruction, STRING_t);
-}
-
-void ParseExpression(char* expr) {
-	int separatorCharacter = findNextStmtSeparator(expr, 0);
-	char* stmtIdentifier;
-	stmtIdentifier = substr(expr, 0, separatorCharacter);
-	trim(stmtIdentifier);
-	
-	MemoryPoint* label = search_for_label(stmtIdentifier);	
-	if(label != NULL) {
-		//Accessing a memory point
-		int exprDeterminer =  findNextCharFromSet(expr, "(=;", 0);
-		if(expr[exprDeterminer] == '(') {
-			//Function Call
-			printf("Call FUNC %s\n", label->name);
-		} else if(expr[exprDeterminer] == '=') {
-			//Variable Assignment
-			printf("Assignment into %s\n", label->name);
-		}
-	}
 }
 
 /**
@@ -122,7 +195,6 @@ void ParseStatement(char* statement) {
 	stmtIdentifier = substr(statement, 0, separatorCharacter);
 	trim(stmtIdentifier);
 	printf("%s\t", stmtIdentifier);
-	
 
 	
 	if(strcmp("if", stmtIdentifier) == 0) {
@@ -217,7 +289,7 @@ HashMap* InitializeTypes() {
 	dataType = malloc(sizeof(struct DataType));
 	*dataType = (struct DataType) {
 		.name = "void*",
-		.size = 2
+		.size = 4
 	};
 	hashmap_put(typeSet, "void*", dataType);
 
@@ -231,7 +303,7 @@ HashMap* InitializeTypes() {
 	dataType = malloc(sizeof(struct DataType));
 	*dataType = (struct DataType) {
 		.name = "char*",
-		.size = 2
+		.size = 4
 	};
 	hashmap_put(typeSet, "char*", dataType);
 	
@@ -245,16 +317,37 @@ HashMap* InitializeTypes() {
 	dataType = malloc(sizeof(struct DataType));
 	*dataType = (struct DataType) {
 		.name = "short*",
-		.size = 2
+		.size = 4
 	};
 	hashmap_put(typeSet, "short*", dataType);
 
 	dataType = malloc(sizeof(struct DataType));
 	*dataType = (struct DataType) {
 		.name = "entrypoint",
-		.size = 2
+		.size = 4
 	};
 	hashmap_put(typeSet, "entrypoint", dataType);
+
+	dataType = malloc(sizeof(struct DataType));
+	*dataType = (struct DataType) {
+		.name = "int*",
+		.size = 4
+	};
+	hashmap_put(typeSet, "int*", dataType);
+
+	dataType = malloc(sizeof(struct DataType));
+	*dataType = (struct DataType) {
+		.name = "float",
+		.size = 4
+	};
+	hashmap_put(typeSet, "float", dataType);
+	
+	dataType = malloc(sizeof(struct DataType));
+	*dataType = (struct DataType) {
+		.name = "float*",
+		.size = 4
+	};
+	hashmap_put(typeSet, "float*", dataType);
 
 	return typeSet;
 }
