@@ -39,7 +39,7 @@ typedef struct MemoryPoint {
 
 enum StructType {
 	Generic_t,
-	MemoryPoint_t,
+	MEMORYPOINT_t,
 	DataType_t,
 	FUNC_t,
 	IF_t,
@@ -51,6 +51,40 @@ enum StructType {
 HashMap* types;
 vec* scope;
 vec* outputData;
+vec* outputText;
+
+void cleanup_scope(HashMap* currScope) {
+	MemoryPoint* point = hashmap_reset(currScope);
+	while(point != NULL) {
+		if(point->name != NULL) {
+			free(point->name);
+			point->name = NULL;
+		}
+		if(point->scope != NULL) {
+			cleanup_scope(point->scope);
+			point->scope = NULL;
+		}
+		point = hashmap_next(currScope);
+	}
+	destroy_hashmap(currScope);
+}
+
+void cleanup() {
+	HashMap* currScope = vec_pop(scope);
+	while(currScope != NULL) {
+		cleanup_scope(currScope);
+		currScope = vec_pop(scope);
+	}
+
+	scope = destroy_vec(scope);
+	outputText = destroy_vec(outputText);
+	outputData = destroy_vec(outputData);
+	types = destroy_hashmap(types);
+}
+
+void error(char* str) {
+	
+}
 
 
 char* ParseLiteral(char* literal) {
@@ -138,6 +172,18 @@ char* ParseExpression(char* expr) {
 		free(stmtIdentifier);
 	}
 	return ParseLiteral(expr);
+}
+
+
+
+unsigned int get_frame_size(HashMap* frame) {
+	MemoryPoint* var = hashmap_reset(frame);
+	unsigned int size;
+	while(var != NULL) {
+		size += var->dataType->size;
+		var = hashmap_next(frame);
+	}
+	return size;	
 }
 
 /**
@@ -239,7 +285,64 @@ void ParseStatement(char* statement) {
 			};
 			hashmap_put(internalScope, "!returnAddr", returnAddr);
 			vec_push_t(scope, internalScope, FUNC_t);
+			
 
+			if(returnType->size > 0) {
+				//Only process return types that aren't void
+				MemoryPoint* returnVal = malloc( sizeof(MemoryPoint));
+				*returnVal = (MemoryPoint) {
+					.name = malloc(strlen("!returnVal") + 1),
+					.dataType = returnType,
+					.addressType = LOCAL,
+					.value = 4
+				};
+				strcpy(returnVal->name, "!returnVal");
+				returnVal->name = "!returnVal";
+				hashmap_put_t(internalScope, "!returnVal", returnVal, MEMORYPOINT_t);
+				printf("Return Type %s\n", returnType->name);
+			}
+
+			//Iterate through and parse parameters
+			unsigned int closeFuncParams = findNextCharFromSet(statement, ",){", statementDeterminer); 
+			unsigned int lastParamPos = statementDeterminer;
+			while(statement[closeFuncParams] != '{') {
+				if(!(statement[closeFuncParams] == ')' && statement[lastParamPos] == '(')) {
+					//Push new param into list
+					char* param = substr(statement, lastParamPos+1, closeFuncParams-lastParamPos-1);
+					trim(param);
+					
+					//Parse Parameter type
+					unsigned int typeBoundary = findNextCharFromSet(param, " ", 0);
+					char* typeIdentifier = substr(param, 0, typeBoundary);
+					trim(typeIdentifier);
+					
+					char* name = substr(param, typeBoundary, strlen(param)-typeBoundary);
+					trim(name);
+
+					if(hashmap_key_exists(types, typeIdentifier)) {
+						DataType* paramType = hashmap_get(types, typeIdentifier);
+						MemoryPoint* newParam = calloc(1, sizeof(MemoryPoint));
+						*newParam = (MemoryPoint) {
+							.name = name,
+							.dataType = paramType,
+							.addressType = LOCAL,
+							.value = get_frame_size(internalScope)
+						};
+						hashmap_put_t(internalScope, name, newParam, MEMORYPOINT_t);
+					} else {
+						free(name);
+						name = NULL;
+					}
+						
+					printf("New Param - %s %s\n", typeIdentifier, name);
+					free(typeIdentifier);
+					typeIdentifier = NULL;
+					free(param);
+					param = NULL;
+				}
+				lastParamPos = closeFuncParams;
+				closeFuncParams = findNextCharFromSet(statement, ",){", closeFuncParams+1); 
+			}
 		}
 		else if(statement[statementDeterminer] == '=' || statement[statementDeterminer] == ';') {
 			DataType* dataType = hashmap_get(types, stmtIdentifier);
@@ -252,7 +355,6 @@ void ParseStatement(char* statement) {
 				.dataType = dataType,
 				.addressType = scope->length > 1 ? LOCAL : GLOBAL
 			};
-			hashmap_put(currentScope, varName, var);
 			
 			if(scope->length == 1) {
 				//Initialize global variable
@@ -262,8 +364,11 @@ void ParseStatement(char* statement) {
 					InitializeGlobal(dataType, varName, assignmentExpr, 0);
 					free(assignmentExpr);
 				}
+				var->value = 0;
+			} else {
+				var->value = get_frame_size(currentScope);
 			}
-
+			hashmap_put_t(currentScope, varName, var, MEMORYPOINT_t);
 		}
 		return;
 	}
@@ -330,6 +435,13 @@ HashMap* InitializeTypes() {
 
 	dataType = malloc(sizeof(struct DataType));
 	*dataType = (struct DataType) {
+		.name = "int",
+		.size = 4
+	};
+	hashmap_put(typeSet, "int", dataType);
+
+	dataType = malloc(sizeof(struct DataType));
+	*dataType = (struct DataType) {
 		.name = "int*",
 		.size = 4
 	};
@@ -352,33 +464,6 @@ HashMap* InitializeTypes() {
 	return typeSet;
 }
 
-void cleanup_scope(HashMap* currScope) {
-	MemoryPoint* point = hashmap_reset(currScope);
-	while(point != NULL) {
-		if(point->name != NULL) {
-			free(point->name);
-			point->name = NULL;
-		}
-		if(point->scope != NULL) {
-			cleanup_scope(point->scope);
-			point->scope = NULL;
-		}
-		point = hashmap_next(currScope);
-	}
-	destroy_hashmap(currScope);
-}
-
-void cleanup() {
-	HashMap* currScope = vec_pop(scope);
-	while(currScope != NULL) {
-		cleanup_scope(currScope);
-		currScope = vec_pop(scope);
-	}
-
-	scope = destroy_vec(scope);
-	outputData = destroy_vec(outputData);
-	types = destroy_hashmap(types);
-}
 
 
 
@@ -401,6 +486,7 @@ int main() {
 	HashMap* globalScope = new_hashmap();
 	scope = new_vec();
 	outputData = new_vec();
+	outputText = new_vec();
 	vec_push(scope, globalScope);
 	
 	FILE *fptr;
