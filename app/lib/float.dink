@@ -1,0 +1,34 @@
+#INCLUDEIFNOT "lib/stdio.dink"
+
+CONST FLOAT_WRITE: *char = 0xFF50
+CONST FLOAT_READ: *char = 0xFF51
+
+FUNC parse_float(str: *char, length: word): word
+	CALL breakpoint()
+	//Clear the float controller
+	SET *FLOAT_WRITE = (char)2
+	SET length = length - 1
+	WHILE length >= 0
+		SET *FLOAT_WRITE = str[length]
+		SET length = length - 1
+	ENDWHILE
+	RETURN FLOAT_READ
+ENDFUNC
+
+FUNC test_float()
+	CALL malloc(16)
+	DEFINE float_input: *word = !returnVal
+	DEFINE float_length: word = 0
+
+	WHILE TRUE
+		CALL scanline(float_input)
+		SET float_length = !returnVal
+		CALL print_word(float_length)
+		SET *putchar = 10
+
+		CALL parse_float(float_input, float_length)
+		SET float_length = !returnVal
+		CALL print_word(float_length)
+		SET *putchar = 10
+	ENDWHILE
+ENDFUNC

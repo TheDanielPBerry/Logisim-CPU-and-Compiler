@@ -1,6 +1,6 @@
 
-// Simple hashing algorithm to hash an array of values into a table
-FUNC hash(str: *char, length: word): word
+// Simple hashing algorithm to hash an array of values into a number
+FUNC hashn(str: *char, length: word): word
 	DEFINE index: word = 0
 	DEFINE accumulator: word = 1
 	SET length = length - 1

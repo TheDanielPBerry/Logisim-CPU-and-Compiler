@@ -1223,10 +1223,8 @@
 			echo $line;
 			if($lineNumber == $num) {
 				echo "</span>";
-			} else if(substr($line, -1) != "\n") {
-				echo "\n";
 			}
-
+			echo "\n";
 		}
 		echo "</pre>";
 	}
@@ -1250,8 +1248,8 @@
 	function mathExpression($args) {
 		
 	}
-	echo "\n<br/>\n<br/>\n<br/>";
-	print_r($result);
+	//echo "\n<br/>\n<br/>\n<br/>";
+	//print_r($result);
 ?>
 
 

@@ -1,3 +1,4 @@
+#INCLUDEIFNOT 'lib/stdio.dink'
 
 FUNC factorial(num: word): word
 	DEFINE fact: word = 1

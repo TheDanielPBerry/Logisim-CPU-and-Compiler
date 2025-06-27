@@ -1,0 +1,49 @@
+
+
+
+FUNC fibo(n: char): word
+	DEFINE i: char = 0
+	DEFINE result: word = 0
+	DEFINE temp: word = 0
+	DEFINE next: word = 1
+
+	WHILE i < n
+		MOV next -> D
+		MOV result -> C
+		ALU D + C -> C
+		MOV C -> next
+		MOV D -> result
+		MOV i -> A
+		ALU A + 1 -> A
+		MOV A -> i
+	ENDWHILE
+	RETURN result
+ENDFUNC
+
+
+DEFINE fibo_instructions: *char = "Enter an index to calculate in the fibonacci sequence.\nEnter a 69 to quit the program."
+
+FUNC fibo_program(): char
+	CALL println(&fibo_instructions)
+	DEFINE result: word = 0
+	CALL print(&prompt)
+	CALL scan_num()
+	DEFINE n: word = !returnVal
+	SET *putchar = (char)10
+	DEFINE nybble: char = 0
+
+	WHILE n != 69
+		MOV n -> C
+		MOV B -> nybble
+		CALL fibo(nybble)
+		SET result = !returnVal
+		CALL print_word(result)
+		SET *putchar = (char)10
+		CALL print(&prompt)
+		CALL scan_num()
+		SET n = !returnVal
+		SET *putchar = (char)10
+	ENDWHILE
+
+	RETURN 0
+ENDFUNC

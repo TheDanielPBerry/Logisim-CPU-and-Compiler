@@ -2,13 +2,9 @@ version: "3.8"
 services:
   logisim:
     container_name: logisim
-    image: lamp_stack
-    build:
-      context: .
-      target: lamp_stack
-      dockerfile: lamp.dockerfile
+    image: php:apache-bookworm
     volumes:
-      - ./app:/app
+      - ./app:/var/www/html
     ports:
       - 8080:80
 

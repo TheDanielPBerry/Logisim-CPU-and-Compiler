@@ -6,19 +6,22 @@
 #INCLUDEIFNOT 'lib/hash.dink'
 #INCLUDEIFNOT 'lib/list.dink'
 #INCLUDEIFNOT 'lib/test.dink'
-#INCLUDEIFNOT 'lib/graphics.dink'
-#INCLUDEIFNOT 'lib/float.dink'
-#INCLUDEIFNOT 'bin/fibo.dink'
 #INCLUDEIFNOT 'bin/shell.dink'
+#INCLUDEIFNOT 'lib/graphics.dink'
 
 
 
 
 FUNC main()
 	CALL clear_screen()
-	//CALL set_color(20, 255, 20)
-	//CALL fill_rect(20, 20, 40, 40)
-	//CALL fibo_program()
-	//CALL shell()
-	CALL test_float()
-ENDFUNC
+	CALL set_color(20, 255, 20)
+	CALL fill_rect(20, 20, 40, 40)
+	CALL shell()
+0
+l
+l
+
+
+P
+
+

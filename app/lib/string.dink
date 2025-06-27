@@ -1,3 +1,5 @@
+#INCLUDEIFNOT "lib/stdlib.h"
+
 //Get String length
 FUNC str_len(str: *char): word
 	DEFINE index: word = 0
@@ -7,7 +9,20 @@ FUNC str_len(str: *char): word
 	RETURN index
 ENDFUNC
 
-FUNC str_pos(needle: *char, haystack: *char): word
+FUNC strchr(needle: char, haystack: *char): word
+	DEFINE haystackIndex: word = 0
+
+	WHILE (char)haystack[haystackIndex] != (char)0
+		IF (char)haystack[haystackIndex] == (char)needle
+			RETURN haystackIndex
+		ENDIF
+		SET haystackIndex = haystackIndex + 1
+	ENDWHILE
+	RETURN -1
+ENDFUNC
+
+
+FUNC strpos(needle: *char, haystack: *char): word
 	//DEFINE haystackIndex: word = 0
 	//DEFINE needleIndex: word = 0
 	//
@@ -66,27 +81,98 @@ FUNC str_pos(needle: *char, haystack: *char): word
 ENDFUNC
 
 //String compare
-FUNC str_cmp(left: *char, right: *char): char
+FUNC strcmp(left: *char, right: *char): char
 	DEFINE index: word = 0
-	WHILE left[index] == right[index]
+	DEFINE result: word = left[0] - right[0]
+	WHILE result == 0
 		IF left[index] == 0
-			RETURN TRUE
+			RETURN result
 		ENDIF
 		SET index = index + 1
+		SET result = left[index] - right[index]
 	ENDWHILE
-	RETURN FALSE
+	RETURN result
 ENDFUNC
 
 
 
 //Copy a string
-FUNC str_copy(src: *char, dest: *char)
+FUNC strcpy(dest: *char, src: *char): *char
 	DEFINE index: word = 0
-	WHILE src[index] != 0
+	WHILE (char)src[index] != (char)0
 		SET dest[index] = src[index]
 		SET index = index+1
 	ENDWHILE
-	dest[index] = 0
+	SET dest[index] = (char)0
+	RETURN dest
+ENDFUNC
+
+FUNC strncpy(dest: *char, src: *char, n: word): *char
+	DEFINE index: word = 0
+	WHILE (char)src[index] != (char)0
+		IF index > n
+			ALU A | 0 -> NUL
+			JE :exit_strncpy
+		ENDIF
+		SET dest[index] = src[index]
+		SET index = index + 1
+	ENDWHILE
+
+	ENTRY :exit_strncpy
+	SET dest[index] = (char)0
+	RETURN dest
+ENDFUNC
+
+
+FUNC strlen(subject: *char): word
+	DEFINE index: word = 0
+	WHILE (char)subject[index] != (char)0
+		SET index = index + 1
+	ENDWHILE
+	RETURN index
+ENDFUNC
+
+
+DEFINE TRIM_DEFAULT_CHARACTERS: *char = " \t"
+FUNC trim_in_place(subject: *char, characters: *char): *char
+	CALL breakpoint()
+	IF characters == (*char)NULL
+		SET characters = TRIM_DEFAULT_CHARACTERS
+	ENDIF
+
+	DEFINE index: word = 0
+	DEFINE direction: word = 1
+	DEFINE str_start: word = 0
+	DEFINE str_end: word = 0
+	DEFINE str_examine: char = (char)subject[index]
+	DEFINE result: word = 0
+
+	WHILE str_examine != (char)0
+		CALL strchr(str_examine, characters)
+		SET result = !returnVal
+
+		CALL print_word(index)
+		SET *putchar = 0x20
+		CALL print_word(result)
+		SET *putchar = 10
+
+		IF result < 0
+			CALL breakpoint()
+			IF direction < 0
+				SET str_end = index - str_start
+				DEFINE src: *char = subject + str_start
+				CALL strncpy(subject, src, str_end)
+				RETURN subject
+			ELSE
+				SET str_start = index
+				CALL strlen(subject)
+				SET index = !returnVal
+				SET direction = direction * -1
+			ENDIF
+		ENDIF
+		SET index = index + direction
+		SET str_examine = (char)subject[index]
+	ENDWHILE
 ENDFUNC
 
 

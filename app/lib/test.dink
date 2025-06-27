@@ -14,7 +14,7 @@ FUNC test_str_pos()
 		CALL print(&prompt)
 		CALL scanline(str2)
 		
-		CALL str_pos(str2, str1)
+		CALL strpos(str2, str1)
 		DEFINE position: word = !returnVal
 		CALL print_word(position)
 		SET *putchar = (char)10
@@ -23,7 +23,7 @@ FUNC test_str_pos()
 
 ENDFUNC
 
-FUNC test_str_cmp()	
+FUNC test_strcmp()	
 	//CALL init_heap()
 	CALL malloc(255)
 	DEFINE str1: *word = !returnVal
@@ -39,7 +39,7 @@ FUNC test_str_cmp()
 		CALL print(&prompt)
 		CALL scanline(str2)
 		
-		CALL str_cmp(str2, str1)
+		CALL strcmp(str2, str1)
 		SET result = (char)!returnVal + (char)0x30
 		SET *putchar = result
 		SET *putchar = (char)10

@@ -1,4 +1,4 @@
-
+DEFINE prompt: *char = "> "
 
 CONST putchar: *char = 0xFF02
 CONST getchar: *char = 0xFF04
@@ -47,10 +47,13 @@ FUNC scanline(str: *char): word
 	
 	WHILE character != '\\n'
 		IF character != 0
-			SET *putchar = character
 			IF character == 8
-				SET index = index - 1
+				IF index > 0
+					SET *putchar = character
+					SET index = index - 1
+				ENDIF
 			ELSE
+				SET *putchar = character
 				SET str[index] = character
 				SET index = index + 1
 			ENDIF

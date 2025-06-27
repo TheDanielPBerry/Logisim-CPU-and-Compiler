@@ -1,0 +1,65 @@
+#INCLUDEIFNOT 'lib/stdlib.dink'
+
+CONST GPU_CONTROLLER: word = 0xFF40
+
+CONST GPU_CMD: word = 0x0001
+//COMMANDS
+CONST GPU_FILL_TRIANGLE: char = 0x03
+CONST GPU_FILL_RECT: char = 0x02
+CONST GPU_CLEAR_SCREEN_CMD: char = 0x01
+
+//DATA Register Offsets
+CONST GPU_X_COORD = 0x0002
+CONST GPU_Y_COORD = 0x0003
+CONST GPU_X_VEC = 0x0004
+CONST GPU_Y_VEC = 0x0005
+CONST GPU_RED = 0x0006
+CONST GPU_GREEN = 0x0007
+CONST GPU_BLUE = 0x0008
+CONST GPU_VEC3X = 0x0009
+CONST GPU_VEC3Y = 10
+
+
+FUNC set_color(red: char, green: char, blue: char)
+	MOV GPU_CONTROLLER -> IDX
+	MOV red -> A
+	MOV A -> MIX (0006)
+	MOV green -> A
+	MOV A -> MIX (0007)
+	MOV blue -> A
+	MOV A -> MIX (0008)
+ENDFUNC
+
+FUNC fill_rect(x: char, y: char, w: char, h: char)
+	MOV GPU_CONTROLLER -> IDX
+	//Set x and y
+	MOV x -> A
+	MOV A -> MIX (0002)
+	MOV y -> B
+	MOV B -> MIX (0003)
+
+	//Set width and height
+	MOV w -> A
+	MOV A -> MIX (0004)
+	MOV h -> B
+	MOV B -> MIX (0005)
+
+	//Run Command
+	MOV GPU_FILL_RECT -> A
+	MOV A -> MIX (0001)
+ENDFUNC
+
+
+FUNC fill_triangle()
+
+ENDFUNC
+
+
+FUNC draw_line()
+ENDFUNC
+
+FUNC clear_screen()
+	MOV GPU_CONTROLLER -> IDX
+	MOV GPU_CLEAR_SCREEN_CMD -> A
+	MOV A -> MIX (0001)
+ENDFUNC

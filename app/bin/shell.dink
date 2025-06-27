@@ -1,0 +1,12 @@
+FUNC shell(): word
+	CALL malloc(255)
+	DEFINE input_shell: *word = !returnVal
+	WHILE TRUE
+		CALL print(&prompt)
+		CALL scanline(input_shell)
+		CALL println(input_shell)
+		SET *putchar = 10
+	ENDWHILE
+ENDFUNC
+
+
