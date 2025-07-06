@@ -4,7 +4,6 @@ CONST FLOAT_WRITE: *char = 0xFF50
 CONST FLOAT_READ: *char = 0xFF51
 
 FUNC parse_float(str: *char, length: word): word
-	CALL breakpoint()
 	//Clear the float controller
 	SET *FLOAT_WRITE = (char)2
 	SET length = length - 1
@@ -15,20 +14,79 @@ FUNC parse_float(str: *char, length: word): word
 	RETURN FLOAT_READ
 ENDFUNC
 
+
+CONST FLOAT_STR_RESET: *char = 0XFF53
+CONST FLOAT_STR_WRITE: *word = 0XFF54
+CONST FLOAT_STR_READ: *char = 0XFF56
+
+FUNC float_to_string(dest: *char, float: word, precision: char): word
+	SET *FLOAT_STR_RESET = precision
+	SET *FLOAT_STR_WRITE = float
+	DEFINE index: word = 0
+	SET dest[index] = FLOAT_STR_READ
+	WHILE dest[index] != 0
+		SET index = index + 1
+		SET dest[index] = FLOAT_STR_READ
+	ENDWHILE
+	RETURN index
+ENDFUNC
+
+
+CONST FLOAT_A_WRITE: *word = 0xFF60
+CONST FLOAT_B_WRITE: *word = 0xFF62
+CONST FLOAT_ADD_READ: *word = 0xFF62
+CONST FLOAT_SUB_READ: *word = 0xFF64
+CONST FLOAT_MUL_READ: *word = 0xFF66
+CONST FLOAT_DIV_READ: *word = 0xFF68
+CONST FLOAT_INT_READ: *word = 0xFF6C
+
+FUNC float_add(left: word, right: word): word
+	SET FLOAT_A_WRITE = left
+	SET FLOAT_B_WRITE = right
+	RETURN FLOAT_ADD_READ
+ENDFUNC
+
+
+
+FUNC float_sub(left: word, right: word): word
+	SET FLOAT_A_WRITE = left
+	SET FLOAT_B_WRITE = right
+	RETURN FLOAT_SUB_READ
+ENDFUNC
+
+
+FUNC float_mul(left: word, right: word): word
+	SET FLOAT_A_WRITE = left
+	SET FLOAT_B_WRITE = right
+	RETURN FLOAT_MUL_READ
+ENDFUNC
+
+
+FUNC float_div(dividend: word, divisor: word): word
+	SET FLOAT_A_WRITE = dividend
+	SET FLOAT_B_WRITE = divisor
+	RETURN FLOAT_DIV_READ
+ENDFUNC
+
+
 FUNC test_float()
 	CALL malloc(16)
-	DEFINE float_input: *word = !returnVal
+	DEFINE float_input: *char = !returnVal
 	DEFINE float_length: word = 0
+	CALL malloc(16)
+	DEFINE float_output: *char = !returnVal
 
 	WHILE TRUE
 		CALL scanline(float_input)
 		SET float_length = !returnVal
-		CALL print_word(float_length)
-		SET *putchar = 10
 
 		CALL parse_float(float_input, float_length)
 		SET float_length = !returnVal
-		CALL print_word(float_length)
-		SET *putchar = 10
+
+
+		CALL float_div(float_length, 0x4000)
+		SET float_length = !returnVal
+		CALL float_to_string(float_output, float_length, 2)
+		CALL println(float_output)
 	ENDWHILE
 ENDFUNC

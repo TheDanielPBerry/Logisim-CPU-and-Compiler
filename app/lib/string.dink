@@ -81,6 +81,23 @@ FUNC strpos(needle: *char, haystack: *char): word
 ENDFUNC
 
 //String compare
+FUNC strncmp(left: *char, right: *char, length: word): char
+	DEFINE index: word = 0
+	DEFINE result: word = left[0] - right[0]
+	WHILE result == 0
+		IF left[index] == 0
+			RETURN result
+		ENDIF
+		SET index = index + 1
+		IF index == length
+			RETURN result
+		ENDIF
+		SET result = left[index] - right[index]
+	ENDWHILE
+	RETURN result
+ENDFUNC
+
+//String compare
 FUNC strcmp(left: *char, right: *char): char
 	DEFINE index: word = 0
 	DEFINE result: word = left[0] - right[0]

@@ -6,6 +6,7 @@ CONST GPU_CMD: word = 0x0001
 //COMMANDS
 CONST GPU_FILL_TRIANGLE: char = 0x03
 CONST GPU_FILL_RECT: char = 0x02
+CONST GPU_DRAW_LINE: char = 0x04
 CONST GPU_CLEAR_SCREEN_CMD: char = 0x01
 
 //DATA Register Offsets
@@ -50,13 +51,141 @@ FUNC fill_rect(x: char, y: char, w: char, h: char)
 ENDFUNC
 
 
-FUNC fill_triangle()
 
+
+FUNC draw_float_line(x1: word, y1: word, x2: word, y2: word)
+	MOV GPU_CONTROLLER -> IDX
+	//Set up D as 255
+	MOV 0x5BF8 -> D
+	MOV D -> FLOAT_B_WRITE
+
+	MOV x1 -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_MUL_READ -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_INT_READ -> C
+	MOV B -> MIX (0002)
+
+	MOV y1 -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_MUL_READ -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_INT_READ -> C
+	MOV B -> MIX (0003)
+
+	MOV x2 -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_MUL_READ -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_INT_READ -> C
+	MOV B -> MIX (0004)
+
+	MOV y2 -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_MUL_READ -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_INT_READ -> C
+	MOV B -> MIX (0005)
+
+	MOV GPU_DRAW_LINE -> A
+	MOV A -> MIX (0001)
 ENDFUNC
 
+FUNC draw_float_triangle(x1: word, y1: word, x2: word, y2: word, x3: word, y3: word): char
+	//CALL draw_float_line(x1, y1, x2, y2)
+	//CALL draw_float_line(x1, y1, x3, y3)
+	//CALL draw_float_line(x2, y2, x3, y3)
+	//RETURN 0
 
-FUNC draw_line()
+
+	MOV GPU_CONTROLLER -> IDX
+	//Set up D as 255
+	MOV 0x5BF8 -> D
+	MOV D -> FLOAT_B_WRITE
+
+	MOV x1 -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_MUL_READ -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_INT_READ -> C
+	MOV B -> MIX (0002)
+
+	MOV y1 -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_MUL_READ -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_INT_READ -> C
+	MOV B -> MIX (0003)
+
+	MOV x2 -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_MUL_READ -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_INT_READ -> C
+	MOV B -> MIX (0004)
+
+	MOV y2 -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_MUL_READ -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_INT_READ -> C
+	MOV B -> MIX (0005)
+
+	MOV GPU_DRAW_LINE -> A
+	MOV A -> MIX (0001)
+
+	ENTRY :draw_float_triangle_loop_line_one
+	MOV MIX -> A (0001)
+	ALU A | 4 -> NUL
+	JE :draw_float_triangle_loop_line_one
+
+
+	MOV x3 -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_MUL_READ -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_INT_READ -> C
+	MOV B -> MIX (0004)
+
+	MOV y3 -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_MUL_READ -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_INT_READ -> C
+	MOV B -> MIX (0005)
+
+	MOV GPU_DRAW_LINE -> A
+	MOV A -> MIX (0001)
+
+	ENTRY :draw_float_triangle_loop_line_two
+	MOV MIX -> A (0001)
+	ALU A | 4 -> NUL
+	JE :draw_float_triangle_loop_line_two
+
+
+	MOV x2 -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_MUL_READ -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_INT_READ -> C
+	MOV B -> MIX (0002)
+
+	MOV y2 -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_MUL_READ -> C
+	MOV C -> FLOAT_A_WRITE
+	MOV FLOAT_INT_READ -> C
+	MOV B -> MIX (0003)
+
+	MOV GPU_DRAW_LINE -> A
+	MOV A -> MIX (0001)
+
+	ENTRY :draw_float_triangle_loop_line_three
+	MOV MIX -> A (0001)
+	ALU A | 4 -> NUL
+	JE :draw_float_triangle_loop_line_three
 ENDFUNC
+
 
 FUNC clear_screen()
 	MOV GPU_CONTROLLER -> IDX

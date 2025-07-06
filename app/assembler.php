@@ -396,7 +396,7 @@
 							'address_type' => 'immediate',
 							'size' => 2
 						];
-						$nextId = $conditional['conditionalId'] . '-next-1';
+						$nextId = $conditional['conditionalId'] . '-next-' . count($conditional['next']);
 						if(!isset($stackFrame[$nextId])) {
 							$stackFrame[$nextId] =  [
 								'name' => $nextId,

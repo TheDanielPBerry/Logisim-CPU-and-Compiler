@@ -1,12 +1,121 @@
-FUNC shell(): word
-	CALL malloc(255)
-	DEFINE input_shell: *word = !returnVal
-	WHILE TRUE
-		CALL print(&prompt)
-		CALL scanline(input_shell)
-		CALL println(input_shell)
-		SET *putchar = 10
-	ENDWHILE
-ENDFUNC
-
-
+//#INCLUDEIFNOT "lib/stdio.dink"
+//
+//DEFINE PROGRAM_LIST: *char = "calc\nlist\npaint\npong"
+//DEFINE PROGRAM_INDEX: word = "\0\0\0\0\0\0\0\0\0\0\0\0\0"
+//DEFINE PROGRAM_COUNT: word = 0
+//
+//FUNC list_program(): word
+//	CALL println(&PROGRAM_LIST)
+//	RETURN 0
+//ENDFUNC
+//
+//
+////FUNC generate_program_list(): word
+////	DEFINE program_index: word = 1
+////	DEFINE index: word = 0
+////	MOV 10 -> B
+////
+////	MOV PROGRAM_LIST -> IDX
+////	ENTRY :loop_generate_program_list
+////		MOV MIX -> A (0000)
+////		ALU A | 0 -> NUL
+////		JE :exit_generate_program_list
+////		ALU A | B -> NUL
+////		JE :if_line_break
+////		ENTRY :line_break_return
+////		ALU IDX + 1 -> IDX
+////	GOTO :loop_generate_program_list
+////
+////	ENTRY :if_line_break
+////		MOV IDX -> index
+////		MOV program_index -> D
+////		MOV PROGRAM_INDEX -> IDX
+////		ALU IDX + D -> IDX
+////		ALU D + 1 -> D
+////		MOV D -> program_index
+////		MOV index -> D
+////		MOV D -> MIX (0000)
+////		MOV D -> IDX
+////	GOTO :line_break_return
+////
+////	ENTRY :exit_generate_program_list
+////	SET PROGRAM_COUNT = index
+////	RETURN index
+////ENDFUNC
+//
+//
+////String compare
+//FUNC program_cmp(left: *char, right: *char): char
+//	DEFINE index: word = 0
+//	DEFINE result: word = left[0] - right[0]
+//	WHILE result == 0
+//		IF left[index] == '\\n'
+//			RETURN result
+//		ENDIF
+//		IF left[index] == 0
+//			RETURN result
+//		ENDIF
+//		SET index = index + 1
+//		SET result = left[index] - right[index]
+//	ENDWHILE
+//	RETURN result
+//ENDFUNC
+//
+////Use binary search to find program in Program index
+//FUNC find_program(query: *char): word
+//	DEFINE needle_size: word = PROGRAM_COUNT / 2
+//	DEFINE needle: word = needle_size
+//	CALL print_word(needle_size)
+//	SET *putchar = 10
+//
+//	DEFINE index: word = PROGRAM_INDEX + needle
+//	DEFINE candidate: *char = PROGRAM_LIST[needle]
+//	DEFINE match: char = 1
+//
+//	WHILE match != 0
+//		IF needle < 0
+//			RETURN -1
+//		ELSEIF needle == PROGRAM_COUNT
+//			RETURN -1
+//		ELSEIF needle_size == 0
+//			RETURN -1
+//		ENDIF
+//
+//		CALL print_word(needle_size)
+//		SET *putchar = 10
+//		CALL print_word(needle)
+//		SET *putchar = 10
+//
+//		CALL program_cmp(candidate, query)
+//		SET match = !returnVal
+//
+//		SET needle_size = needle_size / 2
+//
+//		IF match < 0
+//			SET needle = needle - needle_size
+//		ELSE
+//			SET needle = needle + needle_size
+//		ENDIF
+//
+//		SET candidate = PROGRAM_LIST[needle]
+//	ENDWHILE
+//	RETURN needle
+//ENDFUNC
+//
+//FUNC shell(): word
+//	//CALL generate_program_list()
+//	//CALL list_program()
+//	DEFINE program_index: word = 0
+//
+//	CALL malloc(255)
+//	DEFINE input_shell: *char = !returnVal
+//	WHILE TRUE
+//		CALL print(&prompt)
+//		CALL scanline(input_shell)
+//		CALL find_program(input_shell)
+//		SET program_index = !returnVal
+//		SET *putchar = 10
+//		CALL print_word(program_index)
+//		SET *putchar = 10
+//	ENDWHILE
+//ENDFUNC

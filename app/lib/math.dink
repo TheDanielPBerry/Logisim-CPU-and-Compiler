@@ -1,4 +1,5 @@
 #INCLUDEIFNOT 'lib/stdio.dink'
+#INCLUDEIFNOT 'lib/float.dink'
 
 FUNC factorial(num: word): word
 	DEFINE fact: word = 1
@@ -18,6 +19,11 @@ FUNC pow(num: word, power: word): word
 	RETURN result
 ENDFUNC
 
+
+FUNC area_of_circle(radius: word): word
+
+
+ENDFUNC
 
 
 

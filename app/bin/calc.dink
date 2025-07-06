@@ -1,34 +1,139 @@
-
-DEFINE calc_help: *char = "exit"
-DEFINE calc_exit: *char = "exit"
-//Initialize calc function
-FUNC calc(): word
-	CALL println()
-	CALL malloc(256)
-	DEFINE input_str: *word = !returnVal
-	DEFINE num_in: word = 0
-
-	WHILE x
-	RETURN 0
-ENDFUNC
-
-
-
-//Written in assembler for speed sake
-FUNC word_to_string(num: word): *char
-	CONST convert_digit: *word = 0xFF10
-	CONST digit: *char = 0xFF12
-	CONST str: *char = 0x8000
-	SET *convert_digit = num
-
-	MOV (word)0x8000 -> IDX
-	ENTRY :loop_word_to_string
-		MOV digit -> A
-		MOV A -> MIX (0000)
-		ALU A | 0 -> NUL
-		JE :return_word_to_string
-		ALU IDX+1 -> IDX
-	GOTO :loop_word_to_string
-	ENTRY :return_word_to_string
-	RETURN &str
-ENDFUNC
+//
+//
+//	FUNC parse_calc_input(input: *char, left: *char, operator: *char, right: *char): word
+//		CALL trim_in_place(input, NULL)
+//		MOV input -> IDX
+//
+//		MOV MIX -> A (0000)
+//		JUMP :calc_before_minus
+//
+//
+//		ENTRY :calc_after_minus
+//			//Minus Sign
+//			MOV 45 -> B
+//			ALU A | B -> NUL
+//			JE :calc_operator
+//
+//		ENTRY :calc_before_minus
+//
+//			ALU A | 0 -> NUL
+//			JE :error_parse_calc_input
+//
+//			//Plus Sign
+//			MOV 43 -> B
+//			ALU A | B -> NUL
+//			JE :calc_operator
+//
+//			//multiply Sign
+//			MOV 42 -> B
+//			ALU A | B -> NUL
+//			JE :calc_operator
+//
+//			//Division Sign
+//			MOV 47 -> B
+//			ALU A | B -> NUL
+//			JE :calc_operator
+//
+//			//Copy character from input into left
+//			MOV IDX -> D
+//			MOV left -> IDX
+//			MOV A -> MIX (0000)
+//			ALU IDX + 1 -> IDX
+//			MOV IDX -> left
+//			MOV D -> IDX
+//
+//			MOV MIX -> A (0000)
+//		JMP :calc_after_minus
+//
+//
+//		ENTRY :calc_operator
+//			MOV B -> operator
+//
+//			//Null terminate the left
+//			ALU IDX + 1 -> IDX
+//			MOV IDX -> D
+//
+//			MOV left -> IDX
+//			MOV 0 -> A
+//			MOV A -> MIX (0001)
+//
+//			
+//			MOV IDX -> input
+//			CALL strcpy(right, input)
+//
+//		RETURN 0
+//
+//		ENTRY :error_parse_calc_input
+//			RETURN -1
+//
+//	ENDFUNC
+//
+//
+//
+//
+//	DEFINE calc_help: *char = "help"
+//	DEFINE calc_help_text: *char = "Two numbers either side of an arithmetic and press enter"
+//	DEFINE calc_error_text: *char = "Invalid input"
+//	DEFINE calc_exit: *char = "exit"
+//	//Initialize calc function
+//	FUNC calc_program(): word
+//		CALL malloc(128)
+//		DEFINE left_str: *char = !returnVal
+//
+//		CALL malloc(128)
+//		DEFINE right_str: *char = !returnVal
+//
+//		DEFINE operator: char = 0
+//
+//		CALL malloc(256)
+//		DEFINE input_str: *char = !returnVal
+//		DEFINE signal: word = 0
+//
+//
+//		CALL println(&prompt)
+//		CALL scanline(input_str)
+//		CALL strcmp(input_str, &calc_exit)
+//		SET signal = !returnVal
+//		IF signal == 0
+//			RETURN 0
+//		ENDIF
+//		CALL strcmp(input_str, &calc_help)
+//		SET signal = !returnVal
+//		IF signal == 0
+//			CALL println(&calc_help_text)
+//		ELSE
+//			CALL parse_calc_input(left_str, &operator, right_str)
+//			SET signal = !returnVal
+//			IF signal == 0
+//				CALL println(left_str)
+//				SET *putchar = operator
+//				SET *putchar = 10
+//				CALL println(right_str)
+//			ELSE
+//				CALL println(&calc_error_text)
+//			ENDIF
+//		ENDIF
+//		RETURN 0
+//	ENDFUNC
+//
+//
+//
+//
+//	//Written in assembler for speed sake
+//	FUNC word_to_string(num: word): *char
+//		CONST convert_digit: *word = 0xFF10
+//		CONST digit: *char = 0xFF12
+//		CONST str: *char = 0x8000
+//		SET *convert_digit = num
+//
+//		MOV (word)0x8000 -> IDX
+//		ENTRY :loop_word_to_string
+//			MOV digit -> A
+//			MOV A -> MIX (0000)
+//			ALU A | 0 -> NUL
+//			JE :return_word_to_string
+//			ALU IDX+1 -> IDX
+//		GOTO :loop_word_to_string
+//		ENTRY :return_word_to_string
+//		RETURN &str
+//	ENDFUNC
