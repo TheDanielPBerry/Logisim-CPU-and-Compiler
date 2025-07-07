@@ -8895,6 +8895,7 @@
       <a name="appearance" val="NewPins"/>
       <a name="radix" val="float"/>
     </comp>
+    <comp lib="0" loc="(2310,640)" name="Constant"/>
     <comp lib="0" loc="(2310,950)" name="Constant">
       <a name="value" val="0x0"/>
       <a name="width" val="16"/>
@@ -10407,8 +10408,9 @@
     <wire from="(2300,1060)" to="(2450,1060)"/>
     <wire from="(2300,970)" to="(2300,1030)"/>
     <wire from="(2300,970)" to="(2310,970)"/>
+    <wire from="(2310,640)" to="(2330,640)"/>
     <wire from="(2320,850)" to="(2320,920)"/>
-    <wire from="(2330,640)" to="(2330,810)"/>
+    <wire from="(2330,670)" to="(2330,810)"/>
     <wire from="(2330,810)" to="(2330,820)"/>
     <wire from="(2330,810)" to="(2380,810)"/>
     <wire from="(2340,850)" to="(2340,920)"/>
