@@ -1,6 +1,12 @@
 ## Logisim CPU - v5.circ
 This project is for an 8/16 bit cpu I built in Logisim.  
-It has access to a number of devices for data processing as well as I/O with the user.  
+It has access to a number of devices for data processing as well as I/O with the user.   
+  
+Demo Video:  
+![image](https://github.com/user-attachments/assets/e27924e5-7102-4605-9818-b73a648ed646)  
+[https://www.youtube.com/watch?v=CdqjycKLmDs](https://github.com/user-attachments/assets/e27924e5-7102-4605-9818-b73a648ed646)
+  
+
 Unfortunately I have not been able to figure out floating point calculations with a 16 bit word inside the logisim system.  
 You can however do fixed point math operations, but this is not included in the programming language and would have to be done in the assembler.  
 There's still a number of optimizations to be made and available spaces in the opcode for more functionality:  
