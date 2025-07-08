@@ -4,9 +4,9 @@ It has access to a number of devices for data processing as well as I/O with the
   
 ## Demo Video:  
 
-[![IMAGE ALT TEXT](/output_fast.gif)]([http://www.youtube.com/watch?v=viT7sIJhgzI](https://www.youtube.com/watch?v=CdqjycKLmDs) "
+[![IMAGE ALT TEXT](/output_fast.gif)]([https://www.youtube.com/watch?v=CdqjycKLmDs](https://www.youtube.com/watch?v=CdqjycKLmDs) "
 16 Bit Logisim Computer with 3D Graphics")  
-<http://www.youtube.com/watch?v=viT7sIJhgzI>
+[http://www.youtube.com/watch?v=viT7sIJhgzI](https://www.youtube.com/watch?v=CdqjycKLmDs)
 
 
 ## Optimizations left to make:
