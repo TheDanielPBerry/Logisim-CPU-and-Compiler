@@ -1,0 +1,62 @@
+
+#INCLUDEIFNOT 'lib/triangle.dink'
+
+FUNC paint_scene_simple(iterator: *word, length: word)
+	SET length = length * TRIANGLE_STRUCT_WIDTH
+	DEFINE scene_end: *word = iterator + length
+
+	WHILE iterator < scene_end
+		CALL fill_triangle(iterator)
+		SET iterator = iterator + TRIANGLE_STRUCT_WIDTH
+	ENDWHILE
+	MOV A -> PAUSE_DEVICE
+ENDFUNC
+
+CONST NEAR_PLANE: word = 0x2A66
+
+FUNC paint_scene(iterator: *word, length: word, translate: *word)
+	SET length = length * TRIANGLE_STRUCT_WIDTH
+	DEFINE scene_end: *word = iterator + length
+
+	CALL malloc(TRIANGLE_STRUCT_WIDTH)
+	DEFINE triangle_1: *word = !returnVal
+	CALL malloc(TRIANGLE_STRUCT_WIDTH)
+	DEFINE triangle_2: *word = !returnVal
+
+	WHILE iterator < scene_end
+		CALL float_add(iterator[TRIANGLE_STRUCT_X1], translate[P_X])
+		SET triangle_1[TRIANGLE_STRUCT_X1] = !returnVal
+		CALL float_add(iterator[TRIANGLE_STRUCT_Y1], translate[P_Y])
+		SET triangle_1[TRIANGLE_STRUCT_Y1] = !returnVal
+		CALL float_add(iterator[TRIANGLE_STRUCT_Z1], translate[P_Z])
+		SET triangle_1[TRIANGLE_STRUCT_Z1] = !returnVal
+		SET triangle_1[TRIANGLE_STRUCT_R1] = iterator[TRIANGLE_STRUCT_R1]
+		SET triangle_1[TRIANGLE_STRUCT_G1] = iterator[TRIANGLE_STRUCT_G1]
+		SET triangle_1[TRIANGLE_STRUCT_B1] = iterator[TRIANGLE_STRUCT_B1]
+
+		CALL float_add(iterator[TRIANGLE_STRUCT_X2], translate[P_X])
+		SET triangle_1[TRIANGLE_STRUCT_X2] = !returnVal
+		CALL float_add(iterator[TRIANGLE_STRUCT_Y2], translate[P_Y])
+		SET triangle_1[TRIANGLE_STRUCT_Y2] = !returnVal
+		CALL float_add(iterator[TRIANGLE_STRUCT_Z2], translate[P_Z])
+		SET triangle_1[TRIANGLE_STRUCT_Z2] = !returnVal
+		SET triangle_1[TRIANGLE_STRUCT_R2] = iterator[TRIANGLE_STRUCT_R2]
+		SET triangle_1[TRIANGLE_STRUCT_G2] = iterator[TRIANGLE_STRUCT_G2]
+		SET triangle_1[TRIANGLE_STRUCT_B2] = iterator[TRIANGLE_STRUCT_B2]
+
+		CALL float_add(iterator[TRIANGLE_STRUCT_X3], translate[P_X])
+		SET triangle_1[TRIANGLE_STRUCT_X3] = !returnVal
+		CALL float_add(iterator[TRIANGLE_STRUCT_Y3], translate[P_Y])
+		SET triangle_1[TRIANGLE_STRUCT_Y3] = !returnVal
+		CALL float_add(iterator[TRIANGLE_STRUCT_Z3], translate[P_Z])
+		SET triangle_1[TRIANGLE_STRUCT_Z3] = !returnVal
+		SET triangle_1[TRIANGLE_STRUCT_R3] = iterator[TRIANGLE_STRUCT_R3]
+		SET triangle_1[TRIANGLE_STRUCT_G3] = iterator[TRIANGLE_STRUCT_G3]
+		SET triangle_1[TRIANGLE_STRUCT_B3] = iterator[TRIANGLE_STRUCT_B3]
+
+
+		CALL fill_triangle(triangle_1)
+		SET iterator = iterator + TRIANGLE_STRUCT_WIDTH
+	ENDWHILE
+ENDFUNC
+

@@ -464,7 +464,7 @@
 
 				
 				case "CALL":
-					preg_match("/^(?<funcName>[a-zA-Z_](?:[A-Za-z_\d]*)?)\((?<args>[\&A-Za-z_\d, \:\']*)\)$/", $args, $call);
+					preg_match("/^(?<funcName>[a-zA-Z_](?:[A-Za-z_\d]*)?)\((?<args>[\&A-Za-z_\d, \:\'\]\[]*)\)$/", $args, $call);
 					$func = findToken($call['funcName']);
 					if($func['type'] == 'func') {
 						$params = array_filter($func['stack'], fn($var) => $var['param']);
